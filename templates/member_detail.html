@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.View.Member.Name}} | Pillars</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+  <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+    <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
+    <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+      <h1 class="text-3xl font-semibold">{{.View.Member.Name}}</h1>
+      <p class="mt-2 text-slate-300">{{.View.Member.Email}} · {{.View.Member.Phone}}</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">{{.View.Member.Status}}</span>
+        <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">Attendance: {{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span>
+      </div>
+    </div>
+
+    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+        <h2 class="text-lg font-semibold">Attendance</h2>
+        <p class="mt-2 text-sm text-slate-400">Present: {{.View.Summary.AttendancePresent}}</p>
+        <p class="text-sm text-slate-400">Absent without permission: {{.View.Summary.AttendanceAbsent}}</p>
+        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+          {{range .View.Attendance}}
+          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{.MeetingDate}} · {{.Status}}</li>
+          {{end}}
+        </ul>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+        <h2 class="text-lg font-semibold">Dues</h2>
+        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.DuesPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.DuesOwed}}</p>
+        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+          {{range .View.Dues}}
+          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{.DueDate}} · {{.Status}} · {{printf "%.2f" .Amount}}</li>
+          {{end}}
+        </ul>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+        <h2 class="text-lg font-semibold">Fines</h2>
+        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.FinesPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.FinesOwed}}</p>
+        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+          {{range .View.Fines}}
+          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}} · {{printf "%.2f" .Amount}} · {{.Status}}</li>
+          {{end}}
+        </ul>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
+        <h2 class="text-lg font-semibold">Contributions</h2>
+        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
+        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+          {{range .View.Contributions}}
+          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{$.Store.EventTitle .EventID}} · {{printf "%.2f" .Amount}} · {{.Status}}</li>
+          {{end}}
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

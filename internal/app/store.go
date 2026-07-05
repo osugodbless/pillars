@@ -1,0 +1,674 @@
+package app
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	_ "modernc.org/sqlite"
+)
+
+// Store is the cooperative domain store with optional SQLite persistence.
+type Store struct {
+	Members       []Member
+	Attendance    []AttendanceRecord
+	Dues          []DuesRecord
+	Fines         []Fine
+	Events        []Event
+	Contributions []Contribution
+	Applications  []OnboardingApplication
+	Settings      Settings
+	db            *sql.DB
+}
+
+func NewStore() *Store {
+	return &Store{
+		Settings: Settings{AbsenceFineAmount: 1000, ProbationPeriodDays: 90},
+	}
+}
+
+func NewStoreWithPath(path string) (*Store, error) {
+	if path == "" {
+		path = "./data/pillars.db"
+	}
+	if dir := filepath.Dir(path); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, err
+		}
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+
+	store := &Store{db: db, Settings: Settings{AbsenceFineAmount: 1000, ProbationPeriodDays: 90}}
+	if err := store.initDB(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	if err := store.loadFromDB(); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
+	return store, nil
+}
+
+func (s *Store) initDB() error {
+	statements := []string{
+		`CREATE TABLE IF NOT EXISTS members (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			email TEXT,
+			phone TEXT,
+			status TEXT NOT NULL,
+			joined_at TEXT,
+			is_bonafide INTEGER,
+			probation_ends TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS attendance (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			member_id INTEGER NOT NULL,
+			meeting_date TEXT NOT NULL,
+			status TEXT NOT NULL,
+			note TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS dues (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			member_id INTEGER NOT NULL,
+			amount REAL NOT NULL,
+			status TEXT NOT NULL,
+			due_date TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS fines (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			member_id INTEGER NOT NULL,
+			amount REAL NOT NULL,
+			status TEXT NOT NULL,
+			reason TEXT,
+			fine_date TEXT
+		);`,
+		`CREATE TABLE IF NOT EXISTS events (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			description TEXT,
+			date TEXT,
+			goal_amount REAL NOT NULL,
+			status TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS contributions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			event_id INTEGER NOT NULL,
+			member_id INTEGER NOT NULL,
+			amount REAL NOT NULL,
+			status TEXT NOT NULL
+		);`,
+	}
+	for _, stmt := range statements {
+		if _, err := s.db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	if _, err := s.db.Exec(`ALTER TABLE fines ADD COLUMN fine_date TEXT`); err != nil && !contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) loadFromDB() error {
+	members, err := s.listMembersFromDB()
+	if err != nil {
+		return err
+	}
+	s.Members = members
+	attendance, err := s.listAttendanceFromDB()
+	if err != nil {
+		return err
+	}
+	s.Attendance = attendance
+	dues, err := s.listDuesFromDB()
+	if err != nil {
+		return err
+	}
+	s.Dues = dues
+	fines, err := s.listFinesFromDB()
+	if err != nil {
+		return err
+	}
+	s.Fines = fines
+	events, err := s.listEventsFromDB()
+	if err != nil {
+		return err
+	}
+	s.Events = events
+	contributions, err := s.listContributionsFromDB()
+	if err != nil {
+		return err
+	}
+	s.Contributions = contributions
+	return nil
+}
+
+func (s *Store) MemberBalance(memberID int) float64 {
+	balance := 0.0
+	for _, due := range s.Dues {
+		if due.MemberID == memberID {
+			balance += due.Amount
+		}
+	}
+	for _, fine := range s.Fines {
+		if fine.MemberID == memberID && fine.Status == "outstanding" {
+			balance += fine.Amount
+		}
+	}
+	return balance
+}
+
+func (s *Store) MemberDashboardSummary(memberID int, days int) MemberDashboardSummary {
+	summary := MemberDashboardSummary{MemberID: memberID}
+	for _, record := range s.Attendance {
+		if record.MemberID != memberID {
+			continue
+		}
+		if days > 0 {
+			if record.MeetingDate == "" {
+				continue
+			}
+		}
+		summary.AttendanceTotal++
+		if record.Status == "present" {
+			summary.AttendancePresent++
+		}
+		if record.Status == "absent_without_permission" {
+			summary.AttendanceAbsent++
+		}
+	}
+	for _, due := range s.Dues {
+		if due.MemberID != memberID {
+			continue
+		}
+		if due.Status == "paid" || due.Status == "partially_paid" {
+			summary.DuesPaid += due.Amount
+		} else if due.Status == "pending" || due.Status == "owed" {
+			summary.DuesOwed += due.Amount
+		}
+	}
+	for _, fine := range s.Fines {
+		if fine.MemberID != memberID {
+			continue
+		}
+		if fine.Status == "outstanding" {
+			summary.FinesOwed += fine.Amount
+		} else {
+			summary.FinesPaid += fine.Amount
+		}
+	}
+	for _, contribution := range s.Contributions {
+		if contribution.MemberID != memberID {
+			continue
+		}
+		if contribution.Status == "paid" || contribution.Status == "partially_paid" {
+			summary.ContributionsPaid += contribution.Amount
+		} else {
+			summary.ContributionsOwed += contribution.Amount
+		}
+	}
+	return summary
+}
+
+func (s *Store) RecordAttendance(memberID int, meetingDate, status, note string) error {
+	if memberID <= 0 {
+		return fmt.Errorf("member id is required")
+	}
+	if status == "" {
+		return fmt.Errorf("attendance status is required")
+	}
+
+	record := AttendanceRecord{MemberID: memberID, MeetingDate: meetingDate, Status: status, Note: note}
+	if s.db != nil {
+		result, err := s.db.Exec(`INSERT INTO attendance(member_id, meeting_date, status, note) VALUES (?, ?, ?, ?)`, memberID, meetingDate, status, note)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		record.ID = int(id)
+		s.Attendance = append(s.Attendance, record)
+	} else {
+		s.Attendance = append(s.Attendance, record)
+	}
+
+	if status == "absent_without_permission" {
+		if s.db != nil {
+			result, err := s.db.Exec(`INSERT INTO fines(member_id, amount, status, reason, fine_date) VALUES (?, ?, ?, ?, ?)`, memberID, s.Settings.AbsenceFineAmount, "outstanding", "Unapproved absence", meetingDate)
+			if err != nil {
+				return err
+			}
+			id, err := result.LastInsertId()
+			if err != nil {
+				return err
+			}
+			s.Fines = append(s.Fines, Fine{ID: int(id), MemberID: memberID, Amount: s.Settings.AbsenceFineAmount, Status: "outstanding", Reason: "Unapproved absence", FineDate: meetingDate})
+		} else {
+			s.Fines = append(s.Fines, Fine{MemberID: memberID, Amount: s.Settings.AbsenceFineAmount, Status: "outstanding", Reason: "Unapproved absence", FineDate: meetingDate})
+		}
+	}
+	return nil
+}
+
+func recordAttendanceAndDues(store *Store, memberID int, meetingDate, status, note string, duesPaid bool, duesAmount float64) error {
+	if err := store.RecordAttendance(memberID, meetingDate, status, note); err != nil {
+		return err
+	}
+	if duesPaid {
+		return store.AddDues(DuesRecord{MemberID: memberID, Amount: duesAmount, Status: "paid", DueDate: meetingDate})
+	}
+	return store.AddDues(DuesRecord{MemberID: memberID, Amount: duesAmount, Status: "pending", DueDate: meetingDate})
+}
+
+func attendanceStatusFromSelection(present, absenteeism bool) string {
+	if present {
+		return "present"
+	}
+	if absenteeism {
+		return "absent_without_permission"
+	}
+	return "absent_with_permission"
+}
+
+func (s *Store) CreateMember(member Member) error {
+	if member.Name == "" {
+		return fmt.Errorf("member name is required")
+	}
+	if s.db != nil {
+		result, err := s.db.Exec(`INSERT INTO members(name, email, phone, status, joined_at, is_bonafide, probation_ends) VALUES (?, ?, ?, ?, ?, ?, ?)`, member.Name, member.Email, member.Phone, member.Status, member.JoinedAt, boolToInt(member.IsBonafide), member.ProbationEnds)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		member.ID = int(id)
+		s.Members = append(s.Members, member)
+		return nil
+	}
+	member.ID = len(s.Members) + 1
+	member.JoinedAt = member.JoinedAt
+	s.Members = append(s.Members, member)
+	return nil
+}
+
+func (s *Store) AddDues(d DuesRecord) error {
+	if s.db != nil {
+		result, err := s.db.Exec(`INSERT INTO dues(member_id, amount, status, due_date) VALUES (?, ?, ?, ?)`, d.MemberID, d.Amount, d.Status, d.DueDate)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		d.ID = int(id)
+		s.Dues = append(s.Dues, d)
+		return nil
+	}
+	d.ID = len(s.Dues) + 1
+	s.Dues = append(s.Dues, d)
+	return nil
+}
+
+func (s *Store) AddFine(f Fine) error {
+	if s.db != nil {
+		result, err := s.db.Exec(`INSERT INTO fines(member_id, amount, status, reason, fine_date) VALUES (?, ?, ?, ?, ?)`, f.MemberID, f.Amount, f.Status, f.Reason, f.FineDate)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		f.ID = int(id)
+		s.Fines = append(s.Fines, f)
+		return nil
+	}
+	f.ID = len(s.Fines) + 1
+	s.Fines = append(s.Fines, f)
+	return nil
+}
+
+func (s *Store) AddEvent(ev Event) error {
+	if s.db != nil {
+		result, err := s.db.Exec(`INSERT INTO events(title, description, date, goal_amount, status) VALUES (?, ?, ?, ?, ?)`, ev.Title, ev.Description, ev.Date, ev.MinAmountExpected, ev.Status)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		ev.ID = int(id)
+		s.Events = append(s.Events, ev)
+		for _, member := range s.Members {
+			contributionResult, err := s.db.Exec(`INSERT INTO contributions(event_id, member_id, amount, status) VALUES (?, ?, ?, ?)`, ev.ID, member.ID, ev.MinAmountExpected, "pending")
+			if err != nil {
+				return err
+			}
+			contributionID, err := contributionResult.LastInsertId()
+			if err != nil {
+				return err
+			}
+			s.Contributions = append(s.Contributions, Contribution{ID: int(contributionID), EventID: ev.ID, MemberID: member.ID, Amount: ev.MinAmountExpected, Status: "pending"})
+		}
+		return nil
+	}
+	ev.ID = len(s.Events) + 1
+	s.Events = append(s.Events, ev)
+	for _, member := range s.Members {
+		s.Contributions = append(s.Contributions, Contribution{ID: len(s.Contributions) + 1, EventID: ev.ID, MemberID: member.ID, Amount: ev.MinAmountExpected, Status: "pending"})
+	}
+	return nil
+}
+
+func (s *Store) AddContribution(c Contribution) error {
+	minimumAmount := 0.0
+	for _, event := range s.Events {
+		if event.ID == c.EventID {
+			minimumAmount = event.MinAmountExpected
+			break
+		}
+	}
+	if minimumAmount == 0 && s.db != nil {
+		var event Event
+		err := s.db.QueryRow(`SELECT id, title, description, date, goal_amount, status FROM events WHERE id = ?`, c.EventID).Scan(&event.ID, &event.Title, &event.Description, &event.Date, &event.MinAmountExpected, &event.Status)
+		if err == nil {
+			minimumAmount = event.MinAmountExpected
+		}
+	}
+	if minimumAmount > 0 && c.Amount < minimumAmount {
+		return fmt.Errorf("amount must be at least %.2f", minimumAmount)
+	}
+
+	if s.db != nil {
+		var existingID int
+		err := s.db.QueryRow(`SELECT id FROM contributions WHERE event_id = ? AND member_id = ?`, c.EventID, c.MemberID).Scan(&existingID)
+		if err == nil {
+			if _, err := s.db.Exec(`UPDATE contributions SET amount = ?, status = ? WHERE id = ?`, c.Amount, c.Status, existingID); err != nil {
+				return err
+			}
+			for i := range s.Contributions {
+				if s.Contributions[i].EventID == c.EventID && s.Contributions[i].MemberID == c.MemberID {
+					s.Contributions[i].Amount = c.Amount
+					s.Contributions[i].Status = c.Status
+					break
+				}
+			}
+			return nil
+		}
+		if err != sql.ErrNoRows {
+			return err
+		}
+		result, err := s.db.Exec(`INSERT INTO contributions(event_id, member_id, amount, status) VALUES (?, ?, ?, ?)`, c.EventID, c.MemberID, c.Amount, c.Status)
+		if err != nil {
+			return err
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return err
+		}
+		c.ID = int(id)
+		s.Contributions = append(s.Contributions, c)
+		return nil
+	}
+
+	for i := range s.Contributions {
+		if s.Contributions[i].EventID == c.EventID && s.Contributions[i].MemberID == c.MemberID {
+			s.Contributions[i].Amount = c.Amount
+			s.Contributions[i].Status = c.Status
+			return nil
+		}
+	}
+	c.ID = len(s.Contributions) + 1
+	s.Contributions = append(s.Contributions, c)
+	return nil
+}
+
+func (s *Store) listMembersFromDB() ([]Member, error) {
+	rows, err := s.db.Query(`SELECT id, name, email, phone, status, joined_at, is_bonafide, probation_ends FROM members ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []Member
+	for rows.Next() {
+		var member Member
+		var bonafide int
+		if err := rows.Scan(&member.ID, &member.Name, &member.Email, &member.Phone, &member.Status, &member.JoinedAt, &bonafide, &member.ProbationEnds); err != nil {
+			return nil, err
+		}
+		member.IsBonafide = bonafide == 1
+		members = append(members, member)
+	}
+	return members, rows.Err()
+}
+
+func (s *Store) listAttendanceFromDB() ([]AttendanceRecord, error) {
+	rows, err := s.db.Query(`SELECT id, member_id, meeting_date, status, note FROM attendance ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var records []AttendanceRecord
+	for rows.Next() {
+		var record AttendanceRecord
+		if err := rows.Scan(&record.ID, &record.MemberID, &record.MeetingDate, &record.Status, &record.Note); err != nil {
+			return nil, err
+		}
+		records = append(records, record)
+	}
+	return records, rows.Err()
+}
+
+func (s *Store) listDuesFromDB() ([]DuesRecord, error) {
+	rows, err := s.db.Query(`SELECT id, member_id, amount, status, due_date FROM dues ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var dues []DuesRecord
+	for rows.Next() {
+		var record DuesRecord
+		if err := rows.Scan(&record.ID, &record.MemberID, &record.Amount, &record.Status, &record.DueDate); err != nil {
+			return nil, err
+		}
+		dues = append(dues, record)
+	}
+	return dues, rows.Err()
+}
+
+func (s *Store) listFinesFromDB() ([]Fine, error) {
+	rows, err := s.db.Query(`SELECT id, member_id, amount, status, reason, fine_date FROM fines ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var fines []Fine
+	for rows.Next() {
+		var record Fine
+		var fineDate sql.NullString
+		if err := rows.Scan(&record.ID, &record.MemberID, &record.Amount, &record.Status, &record.Reason, &fineDate); err != nil {
+			return nil, err
+		}
+		if fineDate.Valid {
+			record.FineDate = fineDate.String
+		}
+		fines = append(fines, record)
+	}
+	return fines, rows.Err()
+}
+
+func (s *Store) listEventsFromDB() ([]Event, error) {
+	rows, err := s.db.Query(`SELECT id, title, description, date, goal_amount, status FROM events ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []Event
+	for rows.Next() {
+		var ev Event
+		if err := rows.Scan(&ev.ID, &ev.Title, &ev.Description, &ev.Date, &ev.MinAmountExpected, &ev.Status); err != nil {
+			return nil, err
+		}
+		events = append(events, ev)
+	}
+	return events, rows.Err()
+}
+
+func (s *Store) listContributionsFromDB() ([]Contribution, error) {
+	rows, err := s.db.Query(`SELECT id, event_id, member_id, amount, status FROM contributions ORDER BY id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var contributions []Contribution
+	for rows.Next() {
+		var c Contribution
+		if err := rows.Scan(&c.ID, &c.EventID, &c.MemberID, &c.Amount, &c.Status); err != nil {
+			return nil, err
+		}
+		contributions = append(contributions, c)
+	}
+	return contributions, rows.Err()
+}
+
+func contains(text, needle string) bool {
+	return len(text) >= len(needle) && (text == needle || len(text) > len(needle) && (contains(text[1:], needle) || text[:len(needle)] == needle))
+}
+
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+type Member struct {
+	ID            int
+	Name          string
+	Email         string
+	Phone         string
+	Status        string
+	JoinedAt      string
+	IsBonafide    bool
+	ProbationEnds string
+}
+
+type AttendanceRecord struct {
+	ID          int
+	MemberID    int
+	MeetingDate string
+	Status      string
+	Note        string
+}
+
+type DuesRecord struct {
+	ID       int
+	MemberID int
+	Amount   float64
+	Status   string
+	DueDate  string
+}
+
+type Fine struct {
+	ID       int
+	MemberID int
+	Amount   float64
+	Status   string
+	Reason   string
+	FineDate string
+}
+
+type Event struct {
+	ID                int
+	Title             string
+	Description       string
+	Date              string
+	MinAmountExpected float64
+	Status            string
+}
+
+func (s *Store) EventTitle(eventID int) string {
+	for _, ev := range s.Events {
+		if ev.ID == eventID {
+			return ev.Title
+		}
+	}
+	return fmt.Sprintf("Event #%d", eventID)
+}
+
+type Contribution struct {
+	ID       int
+	EventID  int
+	MemberID int
+	Amount   float64
+	Status   string
+}
+
+type OnboardingApplication struct {
+	ID         int
+	MemberID   int
+	Status     string
+	AppliedAt  string
+	ReviewedAt string
+}
+
+type Settings struct {
+	AbsenceFineAmount   float64
+	ProbationPeriodDays int
+}
+
+type MemberDashboardSummary struct {
+	MemberID          int
+	AttendanceTotal   int
+	AttendancePresent int
+	AttendanceAbsent  int
+	DuesPaid          float64
+	DuesOwed          float64
+	FinesPaid         float64
+	FinesOwed         float64
+	ContributionsPaid float64
+	ContributionsOwed float64
+	AbsenceFineAmount float64
+}
+
+type AttendanceGroup struct {
+	MeetingDate string
+	Count       int
+	Status      string
+}
+
+func groupAttendanceByDate(records []AttendanceRecord) []AttendanceGroup {
+	groups := make([]AttendanceGroup, 0)
+	seen := make(map[string]int)
+	for _, record := range records {
+		if record.MeetingDate == "" {
+			continue
+		}
+		if index, ok := seen[record.MeetingDate]; ok {
+			groups[index].Count++
+			continue
+		}
+		seen[record.MeetingDate] = len(groups)
+		groups = append(groups, AttendanceGroup{MeetingDate: record.MeetingDate, Count: 1, Status: record.Status})
+	}
+	return groups
+}
