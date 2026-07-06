@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{.Event.Title}} | Pillars</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+{{define "content"}}
+<div id="event-content">
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
     <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
@@ -15,13 +8,13 @@
       <div class="mt-4 flex flex-wrap gap-2">
         <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">{{.Event.Status}}</span>
         <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">Minimum Expected: {{printf "%.2f" .Event.MinAmountExpected}}</span>
-        <span class="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-200">Collected: {{printf "%.2f" .TotalCollected}}</span>
+        <span id="total-collected" class="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-200">Collected: {{printf "%.2f" .TotalCollected}}</span>
       </div>
     </div>
 
     <div class="mt-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
       <h2 class="text-xl font-semibold">Record event payment</h2>
-      <form method="post" action="/contributions" class="mt-4 grid gap-3 md:grid-cols-2">
+      <form hx-post="/contributions" hx-target="#event-content" hx-swap="outerHTML" class="mt-4 grid gap-3 md:grid-cols-2">
         <input type="hidden" name="event_id" value="{{.Event.ID}}" />
         <input name="member_id" placeholder="Member ID" required class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
         <input name="amount" placeholder="Amount" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
@@ -33,11 +26,11 @@
     <div class="mt-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
       <h2 class="text-xl font-semibold">Members</h2>
       <div class="mt-4 flex flex-wrap gap-2">
-        <a href="/event-detail?event_id={{.Event.ID}}" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if or (eq .Filter "") (eq .Filter "all")}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</a>
-        <a href="/event-detail?event_id={{.Event.ID}}&filter=paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "paid"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Paid</a>
-        <a href="/event-detail?event_id={{.Event.ID}}&filter=not_paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_paid"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not paid</a>
-        <a href="/event-detail?event_id={{.Event.ID}}&filter=pending" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "pending"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Pending</a>
-        <a href="/event-detail?event_id={{.Event.ID}}&filter=partially_paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "partially_paid"}}bg-blue-500/20 text-blue-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Partial</a>
+        <button hx-get="/event-detail?event_id={{.Event.ID}}" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if or (eq .Filter "") (eq .Filter "all")}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</button>
+        <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "paid"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Paid</button>
+        <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=not_paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_paid"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not paid</button>
+        <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=pending" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "pending"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Pending</button>
+        <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=partially_paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "partially_paid"}}bg-blue-500/20 text-blue-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Partial</button>
       </div>
       <div class="mt-4 grid gap-3 md:grid-cols-2">
         {{range .Members}}
@@ -55,5 +48,45 @@
       </div>
     </div>
   </div>
+</div>
+{{end}}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.Event.Title}} | Pillars</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+  <div id="toast" class="z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg opacity-0 transition-all duration-300 pointer-events-none"></div>
+  {{template "content" .}}
+  <script>
+    var lastClickPos = null;
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('button, input[type="submit"], a[href], [hx-post], [hx-get]');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        lastClickPos = { x: r.left + r.width / 2, y: r.top };
+      }
+    });
+    document.body.addEventListener('showToast', function(e) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      var d = e.detail;
+      t.textContent = d.message;
+      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+      if (lastClickPos) {
+        t.style.position = 'fixed';
+        t.style.left = lastClickPos.x + 'px';
+        t.style.top = (lastClickPos.y - 10) + 'px';
+        t.style.transform = 'translateX(-50%) translateY(-100%)';
+      }
+      t.style.opacity = '1';
+      setTimeout(function() { t.style.opacity = '0'; }, 2000);
+    });
+  </script>
 </body>
 </html>

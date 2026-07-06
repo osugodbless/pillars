@@ -26,6 +26,11 @@ type StatsView struct {
 	OutstandingBalance float64
 	OpenEvents         int
 	OutstandingFines   int
+	TotalDuesPaid      float64
+	TotalDuesOwed      float64
+	TotalFines         float64
+	FinesOwed          float64
+	FinesPaid          float64
 }
 
 type MemberView struct {
@@ -74,12 +79,7 @@ type AttendanceDetailView struct {
 	Filter      string
 }
 
-func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
-	tmpl, err := template.ParseFiles("templates/index.html")
-	if err != nil {
-		return err
-	}
-
+func buildPageData(store *Store) PageData {
 	memberViews := make([]MemberView, 0, len(store.Members))
 	for _, member := range store.Members {
 		memberViews = append(memberViews, MemberView{ID: member.ID, Name: member.Name, Email: member.Email, Phone: member.Phone, Status: member.Status, Balance: store.MemberBalance(member.ID)})
@@ -116,11 +116,40 @@ func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
 			stats.OutstandingFines++
 		}
 	}
+	for _, due := range store.Dues {
+		if due.Status == "paid" || due.Status == "partially_paid" {
+			stats.TotalDuesPaid += due.Amount
+		} else {
+			stats.TotalDuesOwed += due.Amount
+		}
+	}
+	for _, fine := range store.Fines {
+		if fine.Status == "outstanding" {
+			stats.FinesOwed += fine.Amount
+		} else {
+			stats.FinesPaid += fine.Amount
+		}
+	}
+	stats.TotalFines = stats.FinesOwed + stats.FinesPaid
 
-	data := PageData{Members: memberViews, Attendance: attendanceViews, AttendanceGroups: attendanceGroups, Events: store.Events, Fines: store.Fines, Dues: store.Dues, Contributions: store.Contributions, Stats: stats}
+	return PageData{Members: memberViews, Attendance: attendanceViews, AttendanceGroups: attendanceGroups, Events: store.Events, Fines: store.Fines, Dues: store.Dues, Contributions: store.Contributions, Stats: stats}
+}
+
+func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
+	tmpl, err := template.ParseFiles("templates/index.html")
+	if err != nil {
+		return err
+	}
+
+	data := buildPageData(store)
 
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
+	} else {
+		err = tmpl.Execute(&buf, data)
+	}
+	if err != nil {
 		return err
 	}
 
@@ -234,19 +263,42 @@ func buildEventDashboardView(store *Store, eventID int, filter string) *EventDas
 	return &EventDashboardView{Event: event, Contributions: contributions, Members: members, TotalCollected: totalCollected, Filter: filter}
 }
 
+func renderIndexFragment(w http.ResponseWriter, r *http.Request, store *Store, msg string, msgType string) {
+	w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+msg+`","type":"`+msgType+`"}}`)
+	if err := RenderIndex(w, r, store); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
 func HandleMembers(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodPost {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Method not allowed", "error")
+			return
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	name := r.FormValue("name")
 	if name == "" {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Name is required", "error")
+			return
+		}
 		http.Error(w, "name is required", http.StatusBadRequest)
 		return
 	}
 	member := Member{Name: name, Email: r.FormValue("email"), Phone: r.FormValue("phone"), Status: r.FormValue("status"), JoinedAt: time.Now().Format(time.RFC3339)}
 	if err := store.CreateMember(member); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, err.Error(), "error")
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		renderIndexFragment(w, r, store, "Member added", "success")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -254,11 +306,19 @@ func HandleMembers(w http.ResponseWriter, r *http.Request, store *Store) {
 
 func HandleAttendance(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodPost {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Method not allowed", "error")
+			return
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	meetingDate := r.FormValue("meeting_date")
 	if meetingDate == "" {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Meeting date is required", "error")
+			return
+		}
 		http.Error(w, "meeting date is required", http.StatusBadRequest)
 		return
 	}
@@ -266,16 +326,32 @@ func HandleAttendance(w http.ResponseWriter, r *http.Request, store *Store) {
 	if memberIDStr := r.FormValue("member_id"); memberIDStr != "" {
 		memberID, err := strconv.Atoi(memberIDStr)
 		if err != nil || memberID <= 0 {
+			if r.Header.Get("HX-Request") != "" {
+				renderIndexFragment(w, r, store, "Valid member id is required", "error")
+				return
+			}
 			http.Error(w, "valid member id is required", http.StatusBadRequest)
 			return
 		}
 		status := r.FormValue("status")
 		if status == "" {
+			if r.Header.Get("HX-Request") != "" {
+				renderIndexFragment(w, r, store, "Status is required", "error")
+				return
+			}
 			http.Error(w, "status is required", http.StatusBadRequest)
 			return
 		}
 		if err := store.RecordAttendance(memberID, meetingDate, status, r.FormValue("note")); err != nil {
+			if r.Header.Get("HX-Request") != "" {
+				renderIndexFragment(w, r, store, err.Error(), "error")
+				return
+			}
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Attendance recorded", "success")
 			return
 		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -293,16 +369,28 @@ func HandleAttendance(w http.ResponseWriter, r *http.Request, store *Store) {
 		absenteeism := len(r.Form[absenteeismKey]) > 0
 		isLate := len(r.Form[lateKey]) > 0
 		status := attendanceStatusFromSelection(present, absenteeism)
-		if err := recordAttendanceAndDues(store, member.ID, meetingDate, status, note, duesPaid, 1000); err != nil {
+		if err := recordAttendanceAndDues(store, member.ID, meetingDate, status, note, duesPaid, store.Settings.DuesAmount); err != nil {
+			if r.Header.Get("HX-Request") != "" {
+				renderIndexFragment(w, r, store, err.Error(), "error")
+				return
+			}
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if isLate {
 			if err := store.AddFine(Fine{MemberID: member.ID, Amount: store.Settings.LateFineAmount, Status: "outstanding", Reason: "Lateness", FineDate: meetingDate}); err != nil {
+				if r.Header.Get("HX-Request") != "" {
+					renderIndexFragment(w, r, store, err.Error(), "error")
+					return
+				}
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
+	}
+	if r.Header.Get("HX-Request") != "" {
+		renderIndexFragment(w, r, store, "Attendance saved", "success")
+		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
@@ -331,26 +419,50 @@ func HandleDues(w http.ResponseWriter, r *http.Request, store *Store) {
 
 func HandleAddFine(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodPost {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Method not allowed", "error")
+			return
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	memberID, err := strconv.Atoi(r.FormValue("member_id"))
 	if err != nil || memberID <= 0 {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Valid member id is required", "error")
+			return
+		}
 		http.Error(w, "valid member id is required", http.StatusBadRequest)
 		return
 	}
 	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 	if err != nil || amount <= 0 {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Valid amount is required", "error")
+			return
+		}
 		http.Error(w, "valid amount is required", http.StatusBadRequest)
 		return
 	}
 	reason := r.FormValue("reason")
 	if reason == "" {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Reason is required", "error")
+			return
+		}
 		http.Error(w, "reason is required", http.StatusBadRequest)
 		return
 	}
 	if err := store.AddFine(Fine{MemberID: memberID, Amount: amount, Status: "outstanding", Reason: reason, FineDate: r.FormValue("fine_date")}); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, err.Error(), "error")
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		renderIndexFragment(w, r, store, "Fine issued", "success")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -373,12 +485,36 @@ func HandleDeductFine(w http.ResponseWriter, r *http.Request, store *Store) {
 			return
 		}
 		if err := store.DeductFineFromDues(memberID, fineID); err != nil {
+			if r.Header.Get("HX-Request") != "" {
+				w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+err.Error()+`","type":"error"}}`)
+				view := buildMemberDashboardView(store, memberID)
+				if view != nil {
+					RenderMemberDetail(w, r, view, store)
+					return
+				}
+			}
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	} else {
 		if err := store.DeductAllFinesFromDues(memberID); err != nil {
+			if r.Header.Get("HX-Request") != "" {
+				w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+err.Error()+`","type":"error"}}`)
+				view := buildMemberDashboardView(store, memberID)
+				if view != nil {
+					RenderMemberDetail(w, r, view, store)
+					return
+				}
+			}
 			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if r.Header.Get("HX-Request") != "" {
+		w.Header().Set("HX-Trigger", `{"showToast":{"message":"Deducted successfully","type":"success"}}`)
+		view := buildMemberDashboardView(store, memberID)
+		if view != nil {
+			RenderMemberDetail(w, r, view, store)
 			return
 		}
 	}
@@ -401,8 +537,24 @@ func HandleMarkDuesPaid(w http.ResponseWriter, r *http.Request, store *Store) {
 		return
 	}
 	if err := store.MarkDuesPaid(memberID, duesID); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+err.Error()+`","type":"error"}}`)
+			view := buildMemberDashboardView(store, memberID)
+			if view != nil {
+				RenderMemberDetail(w, r, view, store)
+				return
+			}
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		w.Header().Set("HX-Trigger", `{"showToast":{"message":"Marked as paid","type":"success"}}`)
+		view := buildMemberDashboardView(store, memberID)
+		if view != nil {
+			RenderMemberDetail(w, r, view, store)
+			return
+		}
 	}
 	http.Redirect(w, r, "/member-detail?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
 }
@@ -423,24 +575,56 @@ func HandleMarkContributionPaid(w http.ResponseWriter, r *http.Request, store *S
 		return
 	}
 	if err := store.MarkContributionPaid(memberID, eventID); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+err.Error()+`","type":"error"}}`)
+			view := buildMemberDashboardView(store, memberID)
+			if view != nil {
+				RenderMemberDetail(w, r, view, store)
+				return
+			}
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		w.Header().Set("HX-Trigger", `{"showToast":{"message":"Contribution deducted","type":"success"}}`)
+		view := buildMemberDashboardView(store, memberID)
+		if view != nil {
+			RenderMemberDetail(w, r, view, store)
+			return
+		}
 	}
 	http.Redirect(w, r, "/member-detail?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
 }
 
 func HandleEvents(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodPost {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Method not allowed", "error")
+			return
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	minAmountExpected, err := strconv.ParseFloat(r.FormValue("min_amount_expected"), 64)
 	if err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, "Valid minimum amount expected is required", "error")
+			return
+		}
 		http.Error(w, "valid minimum amount expected is required", http.StatusBadRequest)
 		return
 	}
 	if err := store.AddEvent(Event{Title: r.FormValue("title"), Description: r.FormValue("description"), Date: r.FormValue("date"), MinAmountExpected: minAmountExpected, Status: "open"}); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			renderIndexFragment(w, r, store, err.Error(), "error")
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		renderIndexFragment(w, r, store, "Event created", "success")
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -448,21 +632,33 @@ func HandleEvents(w http.ResponseWriter, r *http.Request, store *Store) {
 
 func HandleContribution(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodPost {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"Method not allowed","type":"error"}}`)
+		}
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	eventID, err := strconv.Atoi(r.FormValue("event_id"))
 	if err != nil || eventID <= 0 {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"Valid event id is required","type":"error"}}`)
+		}
 		http.Error(w, "valid event id is required", http.StatusBadRequest)
 		return
 	}
 	memberID, err := strconv.Atoi(r.FormValue("member_id"))
 	if err != nil || memberID <= 0 {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"Valid member id is required","type":"error"}}`)
+		}
 		http.Error(w, "valid member id is required", http.StatusBadRequest)
 		return
 	}
 	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
 	if err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"Valid amount is required","type":"error"}}`)
+		}
 		http.Error(w, "valid amount is required", http.StatusBadRequest)
 		return
 	}
@@ -471,8 +667,24 @@ func HandleContribution(w http.ResponseWriter, r *http.Request, store *Store) {
 		status = "paid"
 	}
 	if err := store.AddContribution(Contribution{EventID: eventID, MemberID: memberID, Amount: amount, Status: status}); err != nil {
+		if r.Header.Get("HX-Request") != "" {
+			w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+err.Error()+`","type":"error"}}`)
+			view := buildEventDashboardView(store, eventID, "")
+			if view != nil {
+				RenderEventDetail(w, r, view)
+				return
+			}
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if r.Header.Get("HX-Request") != "" {
+		w.Header().Set("HX-Trigger", `{"showToast":{"message":"Payment recorded","type":"success"}}`)
+		view := buildEventDashboardView(store, eventID, "")
+		if view != nil {
+			RenderEventDetail(w, r, view)
+			return
+		}
 	}
 	http.Redirect(w, r, "/?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
 }
@@ -492,7 +704,7 @@ func HandleMemberDetail(w http.ResponseWriter, r *http.Request, store *Store) {
 		http.NotFound(w, r)
 		return
 	}
-	RenderMemberDetail(w, view, store)
+	RenderMemberDetail(w, r, view, store)
 }
 
 func HandleEventDetail(w http.ResponseWriter, r *http.Request, store *Store) {
@@ -511,7 +723,7 @@ func HandleEventDetail(w http.ResponseWriter, r *http.Request, store *Store) {
 		http.NotFound(w, r)
 		return
 	}
-	RenderEventDetail(w, view)
+	RenderEventDetail(w, r, view)
 }
 
 func HandleHealth(w http.ResponseWriter, r *http.Request) {
@@ -560,7 +772,12 @@ func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store
 		return
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, view); err != nil {
+	if r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", view)
+	} else {
+		err = tmpl.Execute(&buf, view)
+	}
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

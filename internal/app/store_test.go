@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestMemberBalanceUsesDuesPaidMinusDuesOwedMinusFinesOwed(t *testing.T) {
+func TestMemberBalanceUsesDuesPaidMinusFinesOwed(t *testing.T) {
 	store := NewStore()
 	store.Settings.AbsenceFineAmount = 25
 
@@ -15,8 +15,8 @@ func TestMemberBalanceUsesDuesPaidMinusDuesOwedMinusFinesOwed(t *testing.T) {
 	store.Fines = append(store.Fines, Fine{MemberID: 1, Amount: 30, Status: "outstanding"})
 
 	balance := store.MemberBalance(1)
-	if balance != 20 {
-		t.Fatalf("expected balance 20 (100 paid - 50 owed - 30 fines), got %.2f", balance)
+	if balance != 70 {
+		t.Fatalf("expected balance 70 (100 paid - 30 fines), got %.2f", balance)
 	}
 }
 

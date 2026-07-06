@@ -24,7 +24,7 @@ type Store struct {
 
 func NewStore() *Store {
 	return &Store{
-		Settings: Settings{AbsenceFineAmount: 1000, LateFineAmount: 500, ProbationPeriodDays: 90},
+		Settings: Settings{AbsenceFineAmount: 1000, LateFineAmount: 500, DuesAmount: 2000, ProbationPeriodDays: 90},
 	}
 }
 
@@ -44,7 +44,7 @@ func NewStoreWithPath(path string) (*Store, error) {
 	}
 	db.SetMaxOpenConns(1)
 
-	store := &Store{db: db, Settings: Settings{AbsenceFineAmount: 1000, LateFineAmount: 500, ProbationPeriodDays: 90}}
+	store := &Store{db: db, Settings: Settings{AbsenceFineAmount: 1000, LateFineAmount: 500, DuesAmount: 2000, ProbationPeriodDays: 90}}
 	if err := store.initDB(); err != nil {
 		_ = db.Close()
 		return nil, err
@@ -90,6 +90,7 @@ func (s *Store) initDB() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			member_id INTEGER NOT NULL,
 			amount REAL NOT NULL,
+			deducted REAL NOT NULL DEFAULT 0,
 			status TEXT NOT NULL,
 			due_date TEXT
 		);`,
@@ -123,6 +124,9 @@ func (s *Store) initDB() error {
 		}
 	}
 	if _, err := s.db.Exec(`ALTER TABLE fines ADD COLUMN fine_date TEXT`); err != nil && !contains(err.Error(), "duplicate column name") {
+		return err
+	}
+	if _, err := s.db.Exec(`ALTER TABLE dues ADD COLUMN deducted REAL NOT NULL DEFAULT 0`); err != nil && !contains(err.Error(), "duplicate column name") {
 		return err
 	}
 	return nil
@@ -165,12 +169,8 @@ func (s *Store) loadFromDB() error {
 func (s *Store) MemberBalance(memberID int) float64 {
 	balance := 0.0
 	for _, due := range s.Dues {
-		if due.MemberID == memberID {
-			if due.Status == "paid" || due.Status == "partially_paid" {
-				balance += due.Amount
-			} else {
-				balance -= due.Amount
-			}
+		if due.MemberID == memberID && (due.Status == "paid" || due.Status == "partially_paid") {
+			balance += due.Amount
 		}
 	}
 	for _, fine := range s.Fines {
@@ -209,6 +209,7 @@ func (s *Store) MemberDashboardSummary(memberID int, days int) MemberDashboardSu
 		} else if due.Status == "pending" || due.Status == "owed" {
 			summary.DuesOwed += due.Amount
 		}
+		summary.DuesOwed += due.Deducted
 	}
 	for _, fine := range s.Fines {
 		if fine.MemberID != memberID {
@@ -389,7 +390,12 @@ func (s *Store) MarkContributionPaid(memberID int, eventID int) error {
 
 	var paidDuesIdx []int
 	for i := range s.Dues {
-		if s.Dues[i].MemberID == memberID && (s.Dues[i].Status == "paid" || s.Dues[i].Status == "partially_paid") {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "partially_paid" {
+			paidDuesIdx = append(paidDuesIdx, i)
+		}
+	}
+	for i := range s.Dues {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "paid" {
 			paidDuesIdx = append(paidDuesIdx, i)
 		}
 	}
@@ -401,14 +407,18 @@ func (s *Store) MarkContributionPaid(memberID int, eventID int) error {
 				break
 			}
 			if s.Dues[idx].Amount <= remaining {
+				s.Dues[idx].Deducted += s.Dues[idx].Amount
 				remaining -= s.Dues[idx].Amount
-				if _, err := s.db.Exec(`UPDATE dues SET status = 'pending' WHERE id = ?`, s.Dues[idx].ID); err != nil {
+				s.Dues[idx].Amount = s.Settings.DuesAmount
+				s.Dues[idx].Deducted = 0
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'pending', deducted = 0 WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "pending"
 			} else {
+				s.Dues[idx].Deducted += remaining
 				s.Dues[idx].Amount -= remaining
-				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid' WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid', deducted = ? WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].Deducted, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "partially_paid"
@@ -433,9 +443,13 @@ func (s *Store) MarkContributionPaid(memberID int, eventID int) error {
 			break
 		}
 		if s.Dues[idx].Amount <= remaining {
+			s.Dues[idx].Deducted += s.Dues[idx].Amount
 			remaining -= s.Dues[idx].Amount
+			s.Dues[idx].Amount = s.Settings.DuesAmount
+			s.Dues[idx].Deducted = 0
 			s.Dues[idx].Status = "pending"
 		} else {
+			s.Dues[idx].Deducted += remaining
 			s.Dues[idx].Amount -= remaining
 			s.Dues[idx].Status = "partially_paid"
 			remaining = 0
@@ -466,7 +480,12 @@ func (s *Store) DeductFineFromDues(memberID int, fineID int) error {
 
 	var paidDuesIdx []int
 	for i := range s.Dues {
-		if s.Dues[i].MemberID == memberID && (s.Dues[i].Status == "paid" || s.Dues[i].Status == "partially_paid") {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "partially_paid" {
+			paidDuesIdx = append(paidDuesIdx, i)
+		}
+	}
+	for i := range s.Dues {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "paid" {
 			paidDuesIdx = append(paidDuesIdx, i)
 		}
 	}
@@ -478,14 +497,18 @@ func (s *Store) DeductFineFromDues(memberID int, fineID int) error {
 				break
 			}
 			if s.Dues[idx].Amount <= remaining {
+				s.Dues[idx].Deducted += s.Dues[idx].Amount
 				remaining -= s.Dues[idx].Amount
-				if _, err := s.db.Exec(`UPDATE dues SET status = 'pending' WHERE id = ?`, s.Dues[idx].ID); err != nil {
+				s.Dues[idx].Amount = s.Settings.DuesAmount
+				s.Dues[idx].Deducted = 0
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'pending', deducted = 0 WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "pending"
 			} else {
+				s.Dues[idx].Deducted += remaining
 				s.Dues[idx].Amount -= remaining
-				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid' WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid', deducted = ? WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].Deducted, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "partially_paid"
@@ -510,9 +533,13 @@ func (s *Store) DeductFineFromDues(memberID int, fineID int) error {
 			break
 		}
 		if s.Dues[idx].Amount <= remaining {
+			s.Dues[idx].Deducted += s.Dues[idx].Amount
 			remaining -= s.Dues[idx].Amount
+			s.Dues[idx].Amount = s.Settings.DuesAmount
+			s.Dues[idx].Deducted = 0
 			s.Dues[idx].Status = "pending"
 		} else {
+			s.Dues[idx].Deducted += remaining
 			s.Dues[idx].Amount -= remaining
 			s.Dues[idx].Status = "partially_paid"
 			remaining = 0
@@ -540,7 +567,12 @@ func (s *Store) DeductAllFinesFromDues(memberID int) error {
 
 	var paidDuesIdx []int
 	for i := range s.Dues {
-		if s.Dues[i].MemberID == memberID && (s.Dues[i].Status == "paid" || s.Dues[i].Status == "partially_paid") {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "partially_paid" {
+			paidDuesIdx = append(paidDuesIdx, i)
+		}
+	}
+	for i := range s.Dues {
+		if s.Dues[i].MemberID == memberID && s.Dues[i].Status == "paid" {
 			paidDuesIdx = append(paidDuesIdx, i)
 		}
 	}
@@ -552,14 +584,18 @@ func (s *Store) DeductAllFinesFromDues(memberID int) error {
 				break
 			}
 			if s.Dues[idx].Amount <= remaining {
+				s.Dues[idx].Deducted += s.Dues[idx].Amount
 				remaining -= s.Dues[idx].Amount
-				if _, err := s.db.Exec(`UPDATE dues SET status = 'pending' WHERE id = ?`, s.Dues[idx].ID); err != nil {
+				s.Dues[idx].Amount = s.Settings.DuesAmount
+				s.Dues[idx].Deducted = 0
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'pending', deducted = 0 WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "pending"
 			} else {
+				s.Dues[idx].Deducted += remaining
 				s.Dues[idx].Amount -= remaining
-				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid' WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].ID); err != nil {
+				if _, err := s.db.Exec(`UPDATE dues SET amount = ?, status = 'partially_paid', deducted = ? WHERE id = ?`, s.Dues[idx].Amount, s.Dues[idx].Deducted, s.Dues[idx].ID); err != nil {
 					return err
 				}
 				s.Dues[idx].Status = "partially_paid"
@@ -586,9 +622,13 @@ func (s *Store) DeductAllFinesFromDues(memberID int) error {
 			break
 		}
 		if s.Dues[idx].Amount <= remaining {
+			s.Dues[idx].Deducted += s.Dues[idx].Amount
 			remaining -= s.Dues[idx].Amount
+			s.Dues[idx].Amount = s.Settings.DuesAmount
+			s.Dues[idx].Deducted = 0
 			s.Dues[idx].Status = "pending"
 		} else {
+			s.Dues[idx].Deducted += remaining
 			s.Dues[idx].Amount -= remaining
 			s.Dues[idx].Status = "partially_paid"
 			remaining = 0
@@ -760,7 +800,7 @@ func (s *Store) listAttendanceFromDB() ([]AttendanceRecord, error) {
 }
 
 func (s *Store) listDuesFromDB() ([]DuesRecord, error) {
-	rows, err := s.db.Query(`SELECT id, member_id, amount, status, due_date FROM dues ORDER BY id ASC`)
+	rows, err := s.db.Query(`SELECT id, member_id, amount, deducted, status, due_date FROM dues ORDER BY id ASC`)
 	if err != nil {
 		return nil, err
 	}
@@ -769,7 +809,7 @@ func (s *Store) listDuesFromDB() ([]DuesRecord, error) {
 	var dues []DuesRecord
 	for rows.Next() {
 		var record DuesRecord
-		if err := rows.Scan(&record.ID, &record.MemberID, &record.Amount, &record.Status, &record.DueDate); err != nil {
+		if err := rows.Scan(&record.ID, &record.MemberID, &record.Amount, &record.Deducted, &record.Status, &record.DueDate); err != nil {
 			return nil, err
 		}
 		dues = append(dues, record)
@@ -866,11 +906,12 @@ type AttendanceRecord struct {
 }
 
 type DuesRecord struct {
-	ID       int
-	MemberID int
-	Amount   float64
-	Status   string
-	DueDate  string
+	ID        int
+	MemberID  int
+	Amount    float64
+	Deducted  float64
+	Status    string
+	DueDate   string
 }
 
 type Fine struct {
@@ -919,6 +960,7 @@ type OnboardingApplication struct {
 type Settings struct {
 	AbsenceFineAmount   float64
 	LateFineAmount      float64
+	DuesAmount          float64
 	ProbationPeriodDays int
 }
 

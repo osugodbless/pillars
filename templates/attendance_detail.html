@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Attendance &middot; {{.MeetingDate}} | Pillars</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+{{define "content"}}
+<div id="attendance-content">
   <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
     <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">&larr; Back to dashboard</a>
 
@@ -16,11 +9,11 @@
     </div>
 
     <div class="mt-6 flex flex-wrap gap-2">
-      <a href="?date={{.MeetingDate}}" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter ""}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</a>
-      <a href="?date={{.MeetingDate}}&filter=present" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "present"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Present</a>
-      <a href="?date={{.MeetingDate}}&filter=absent_with_permission" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "absent_with_permission"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Absent with permission</a>
-      <a href="?date={{.MeetingDate}}&filter=absent_without_permission" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "absent_without_permission"}}bg-red-500/20 text-red-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Absent without permission</a>
-      <a href="?date={{.MeetingDate}}&filter=not_recorded" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_recorded"}}bg-slate-500/20 text-slate-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not recorded</a>
+      <button hx-get="/attendance-detail?date={{.MeetingDate}}" hx-target="#attendance-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter ""}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</button>
+      <button hx-get="/attendance-detail?date={{.MeetingDate}}&filter=present" hx-target="#attendance-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "present"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Present</button>
+      <button hx-get="/attendance-detail?date={{.MeetingDate}}&filter=absent_with_permission" hx-target="#attendance-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "absent_with_permission"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Absent with permission</button>
+      <button hx-get="/attendance-detail?date={{.MeetingDate}}&filter=absent_without_permission" hx-target="#attendance-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "absent_without_permission"}}bg-red-500/20 text-red-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Absent without permission</button>
+      <button hx-get="/attendance-detail?date={{.MeetingDate}}&filter=not_recorded" hx-target="#attendance-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_recorded"}}bg-slate-500/20 text-slate-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not recorded</button>
     </div>
 
     <div class="mt-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
@@ -60,5 +53,45 @@
       </div>
     </div>
   </div>
+</div>
+{{end}}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Attendance &middot; {{.MeetingDate}} | Pillars</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+  <div id="toast" class="z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg opacity-0 transition-all duration-300 pointer-events-none"></div>
+  {{template "content" .}}
+  <script>
+    var lastClickPos = null;
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('button, input[type="submit"], a[href], [hx-post], [hx-get]');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        lastClickPos = { x: r.left + r.width / 2, y: r.top };
+      }
+    });
+    document.body.addEventListener('showToast', function(e) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      var d = e.detail;
+      t.textContent = d.message;
+      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+      if (lastClickPos) {
+        t.style.position = 'fixed';
+        t.style.left = lastClickPos.x + 'px';
+        t.style.top = (lastClickPos.y - 10) + 'px';
+        t.style.transform = 'translateX(-50%) translateY(-100%)';
+      }
+      t.style.opacity = '1';
+      setTimeout(function() { t.style.opacity = '0'; }, 2000);
+    });
+  </script>
 </body>
 </html>

@@ -1,12 +1,5 @@
-<!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{.View.Member.Name}} | Pillars</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+{{define "content"}}
+<div id="member-content">
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
     <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
@@ -23,23 +16,28 @@
         <h2 class="text-lg font-semibold">Attendance</h2>
         <p class="mt-2 text-sm text-slate-400">Present: {{.View.Summary.AttendancePresent}}</p>
         <p class="text-sm text-slate-400">Absent without permission: {{.View.Summary.AttendanceAbsent}}</p>
-        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <ul id="attendance-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Attendance}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{.MeetingDate}} · {{.Status}}</li>
           {{end}}
         </ul>
+        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <button id="attendance-prev" onclick="pagePrev('attendance')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+          <span id="attendance-page">1 of 1</span>
+          <button id="attendance-next" onclick="pageNext('attendance')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+        </div>
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Dues</h2>
         <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.DuesPaid}}</p>
         <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.DuesOwed}}</p>
-        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <ul id="dues-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Dues}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
               <span>{{.DueDate}} · {{.Status}} · {{printf "%.2f" .Amount}}</span>
               {{if or (eq .Status "pending") (eq .Status "owed") (eq .Status "partially_paid")}}
-              <form method="post" action="/mark-dues-paid" class="ml-2 shrink-0">
+              <form hx-post="/mark-dues-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                 <input type="hidden" name="dues_id" value="{{.ID}}" />
                 <button type="submit" class="rounded-md bg-emerald-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-emerald-400">Mark paid</button>
@@ -49,24 +47,29 @@
           </li>
           {{end}}
         </ul>
+        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <button id="dues-prev" onclick="pagePrev('dues')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+          <span id="dues-page">1 of 1</span>
+          <button id="dues-next" onclick="pageNext('dues')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+        </div>
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Fines</h2>
         <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.FinesPaid}}</p>
         <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.FinesOwed}}</p>
         {{if gt .View.Summary.FinesOwed 0.0}}
-        <form method="post" action="/deduct-fine" class="mt-3">
+        <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="mt-3">
           <input type="hidden" name="member_id" value="{{.View.Member.ID}}" />
           <button type="submit" class="w-full rounded-lg bg-orange-500/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct all from dues</button>
         </form>
         {{end}}
-        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <ul id="fines-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Fines}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
               <span>{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}} · {{printf "%.2f" .Amount}} · {{.Status}}</span>
               {{if eq .Status "outstanding"}}
-              <form method="post" action="/deduct-fine" class="ml-2 shrink-0">
+              <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                 <input type="hidden" name="fine_id" value="{{.ID}}" />
                 <button type="submit" class="rounded-md bg-orange-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct</button>
@@ -76,18 +79,23 @@
           </li>
           {{end}}
         </ul>
+        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <button id="fines-prev" onclick="pagePrev('fines')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+          <span id="fines-page">1 of 1</span>
+          <button id="fines-next" onclick="pageNext('fines')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+        </div>
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Contributions</h2>
         <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
         <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
-        <ul class="mt-3 space-y-2 text-sm text-slate-300">
+        <ul id="contributions-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Contributions}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
               <span>{{$.Store.EventTitle .EventID}} · {{printf "%.2f" .Amount}} · {{.Status}}</span>
               {{if eq .Status "pending"}}
-              <form method="post" action="/mark-contribution-paid" class="ml-2 shrink-0">
+              <form hx-post="/mark-contribution-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                 <input type="hidden" name="event_id" value="{{.EventID}}" />
                 <button type="submit" class="rounded-md bg-orange-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct</button>
@@ -97,8 +105,91 @@
           </li>
           {{end}}
         </ul>
+        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+          <button id="contributions-prev" onclick="pagePrev('contributions')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+          <span id="contributions-page">1 of 1</span>
+          <button id="contributions-next" onclick="pageNext('contributions')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+        </div>
       </div>
     </div>
   </div>
+</div>
+{{end}}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.View.Member.Name}} | Pillars</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+  <div id="toast" class="z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg opacity-0 transition-all duration-300 pointer-events-none"></div>
+  {{template "content" .}}
+  <script>
+    const PAGE_SIZE = 12;
+    const sections = ['attendance', 'dues', 'fines', 'contributions'];
+    const state = {};
+    function initPagination(id) {
+      const list = document.getElementById(id + '-list');
+      const items = list.querySelectorAll(':scope > li');
+      const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+      state[id] = { items, pages, page: 1 };
+      function show(p) {
+        state[id].page = p;
+        items.forEach((el, i) => el.classList.toggle('hidden', i < (p-1)*PAGE_SIZE || i >= p*PAGE_SIZE));
+        document.getElementById(id + '-page').textContent = p + ' of ' + pages;
+        document.getElementById(id + '-prev').classList.toggle('hidden', p <= 1);
+        document.getElementById(id + '-next').classList.toggle('hidden', p >= pages);
+      }
+      show(1);
+      state[id].show = show;
+    }
+    function pagePrev(id) { const s = state[id]; if (s.page > 1) s.show(s.page - 1); }
+    function pageNext(id) { const s = state[id]; if (s.page < s.pages) s.show(s.page + 1); }
+    function reinitPagination() {
+      sections.forEach(function(id) {
+        const list = document.getElementById(id + '-list');
+        if (!list) return;
+        const items = list.querySelectorAll(':scope > li');
+        if (!items.length) return;
+        if (state[id]) {
+          const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+          state[id].items = items;
+          state[id].pages = pages;
+          state[id].show(1);
+        } else {
+          initPagination(id);
+        }
+      });
+    }
+    document.addEventListener('DOMContentLoaded', reinitPagination);
+    document.addEventListener('htmx:afterSettle', reinitPagination);
+    var lastClickPos = null;
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('button, input[type="submit"], a[href], [hx-post], [hx-get]');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        lastClickPos = { x: r.left + r.width / 2, y: r.top };
+      }
+    });
+    document.body.addEventListener('showToast', function(e) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      var d = e.detail;
+      t.textContent = d.message;
+      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+      if (lastClickPos) {
+        t.style.position = 'fixed';
+        t.style.left = lastClickPos.x + 'px';
+        t.style.top = (lastClickPos.y - 10) + 'px';
+        t.style.transform = 'translateX(-50%) translateY(-100%)';
+      }
+      t.style.opacity = '1';
+      setTimeout(function() { t.style.opacity = '0'; }, 2000);
+    });
+  </script>
 </body>
 </html>

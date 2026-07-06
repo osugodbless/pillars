@@ -6,14 +6,19 @@ import (
 	"net/http"
 )
 
-func RenderEventDetail(w http.ResponseWriter, view *EventDashboardView) {
+func RenderEventDetail(w http.ResponseWriter, r *http.Request, view *EventDashboardView) {
 	tmpl, err := template.ParseFiles("templates/event_detail.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, view); err != nil {
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", view)
+	} else {
+		err = tmpl.Execute(&buf, view)
+	}
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
