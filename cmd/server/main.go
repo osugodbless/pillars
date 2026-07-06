@@ -42,6 +42,21 @@ func main() {
 	mux.HandleFunc("/event-detail", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleEventDetail(w, r, store)
 	})
+	mux.HandleFunc("/attendance-detail", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleAttendanceDetail(w, r, store)
+	})
+	mux.HandleFunc("/fines", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleAddFine(w, r, store)
+	})
+	mux.HandleFunc("/deduct-fine", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleDeductFine(w, r, store)
+	})
+	mux.HandleFunc("/mark-dues-paid", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleMarkDuesPaid(w, r, store)
+	})
+	mux.HandleFunc("/mark-contribution-paid", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleMarkContributionPaid(w, r, store)
+	})
 	mux.HandleFunc("/health", app.HandleHealth)
 
 	log.Println("listening on :8080")

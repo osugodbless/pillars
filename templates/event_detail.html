@@ -31,14 +31,21 @@
     </div>
 
     <div class="mt-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-      <h2 class="text-xl font-semibold">Members who paid</h2>
+      <h2 class="text-xl font-semibold">Members</h2>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <a href="/event-detail?event_id={{.Event.ID}}" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if or (eq .Filter "") (eq .Filter "all")}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</a>
+        <a href="/event-detail?event_id={{.Event.ID}}&filter=paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "paid"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Paid</a>
+        <a href="/event-detail?event_id={{.Event.ID}}&filter=not_paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_paid"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not paid</a>
+        <a href="/event-detail?event_id={{.Event.ID}}&filter=pending" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "pending"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Pending</a>
+        <a href="/event-detail?event_id={{.Event.ID}}&filter=partially_paid" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "partially_paid"}}bg-blue-500/20 text-blue-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Partial</a>
+      </div>
       <div class="mt-4 grid gap-3 md:grid-cols-2">
         {{range .Members}}
         <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
           <p class="font-medium text-slate-100">{{.Name}}</p>
           <p class="text-sm text-slate-400">{{.Email}}</p>
           <div class="mt-2 flex items-center justify-between">
-            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid {{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
+            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid {{printf "%.2f" .Balance}}{{else if eq .Status "partially_paid"}}Partial {{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
             <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs uppercase tracking-wide text-slate-300">{{.Status}}</span>
           </div>
         </div>

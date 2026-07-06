@@ -56,6 +56,7 @@
               <button type="button" data-open-modal="member-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Add member</button>
               <button type="button" data-open-modal="attendance-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Attendance & dues</button>
               <button type="button" data-open-modal="event-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Add event</button>
+              <button type="button" data-open-modal="fine-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Custom fine</button>
             </div>
           </div>
 
@@ -83,16 +84,20 @@
                   <label class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm">
                     <span>{{.Name}}</span>
                     <div class="flex items-center gap-2">
+                      <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
+                      <span class="text-xs uppercase tracking-wide text-slate-400">Present</span>
                       <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
                         <input type="checkbox" name="dues_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
                         <span>Dues</span>
                       </label>
                       <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+                        <input type="checkbox" name="late_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-orange-500" />
+                        <span>Late</span>
+                      </label>
+                      <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
                         <input type="checkbox" name="absenteeism_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
                         <span>Fine</span>
                       </label>
-                      <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
-                      <span class="text-xs uppercase tracking-wide text-slate-400">Present</span>
                     </div>
                   </label>
                   {{end}}
@@ -110,6 +115,22 @@
                 <input name="date" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
                 <input name="min_amount_expected" placeholder="Minimum amount expected" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
                 <button type="submit" class="w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-400">Create event</button>
+              </form>
+            </div>
+
+            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+              <h3 class="font-medium">Custom fine</h3>
+              <form method="post" action="/fines" class="mt-3 space-y-3">
+                <select name="member_id" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0">
+                  <option value="">Select member</option>
+                  {{range $.Members}}
+                  <option value="{{.ID}}">{{.Name}}</option>
+                  {{end}}
+                </select>
+                <input name="amount" placeholder="Amount" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                <input name="reason" placeholder="Reason (e.g. insubordination, disrespect)" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                <input name="fine_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                <button type="submit" class="w-full rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-400">Issue fine</button>
               </form>
             </div>
           </div>
@@ -143,16 +164,20 @@
                 <label class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm">
                   <span>{{.Name}}</span>
                   <div class="flex items-center gap-2">
+                    <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
+                    <span class="text-xs uppercase tracking-wide text-slate-400">Present</span>
                     <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
                       <input type="checkbox" name="dues_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
                       <span>Dues</span>
                     </label>
                     <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+                      <input type="checkbox" name="late_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-orange-500" />
+                      <span>Late</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
                       <input type="checkbox" name="absenteeism_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
                       <span>Fine</span>
                     </label>
-                    <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
-                    <span class="text-xs uppercase tracking-wide text-slate-400">Present</span>
                   </div>
                 </label>
                 {{end}}
@@ -169,6 +194,21 @@
               <input name="date" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
               <input name="min_amount_expected" placeholder="Minimum amount expected" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
               <button type="submit" class="w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-400">Create event</button>
+            </form>
+          </div>
+
+          <div id="fine-form" class="hidden">
+            <form method="post" action="/fines" class="space-y-3">
+              <select name="member_id" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0">
+                <option value="">Select member</option>
+                {{range $.Members}}
+                <option value="{{.ID}}">{{.Name}}</option>
+                {{end}}
+              </select>
+              <input name="amount" placeholder="Amount" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+              <input name="reason" placeholder="Reason (e.g. insubordination, disrespect)" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+              <input name="fine_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+              <button type="submit" class="w-full rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-400">Issue fine</button>
             </form>
           </div>
         </div>
@@ -232,7 +272,7 @@
           <h2 class="text-xl font-semibold">Recent attendance</h2>
           <div class="mt-4 space-y-3">
             {{range .AttendanceGroups}}
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+            <a href="/attendance-detail?date={{.MeetingDate}}" class="block rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-400/40">
               <div class="flex items-center justify-between gap-3">
                 <div>
                   <p class="text-sm font-medium text-slate-100">{{.MeetingDate}}</p>
@@ -240,7 +280,7 @@
                 </div>
                 <span class="rounded-full bg-cyan-500/15 px-2.5 py-1 text-xs uppercase tracking-wide text-cyan-300">{{.Status}}</span>
               </div>
-            </div>
+            </a>
             {{else}}
             <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">No attendance yet.</p>
             {{end}}

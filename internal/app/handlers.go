@@ -59,6 +59,19 @@ type EventDashboardView struct {
 	Contributions  []Contribution
 	Members        []MemberView
 	TotalCollected float64
+	Filter         string
+}
+
+type AttendanceRecordView struct {
+	MemberName string
+	Status     string
+	Note       string
+}
+
+type AttendanceDetailView struct {
+	MeetingDate string
+	Records     []AttendanceRecordView
+	Filter      string
 }
 
 func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
@@ -168,7 +181,7 @@ func buildMemberDashboardView(store *Store, memberID int) *MemberDashboardView {
 	return &MemberDashboardView{Member: member, Summary: summary, Attendance: attendance, Dues: dues, Fines: fines, Contributions: contributions, Events: store.Events}
 }
 
-func buildEventDashboardView(store *Store, eventID int) *EventDashboardView {
+func buildEventDashboardView(store *Store, eventID int, filter string) *EventDashboardView {
 	event := Event{}
 	for _, candidate := range store.Events {
 		if candidate.ID == eventID {
@@ -186,7 +199,9 @@ func buildEventDashboardView(store *Store, eventID int) *EventDashboardView {
 	for _, contribution := range store.Contributions {
 		if contribution.EventID == eventID {
 			contributions = append(contributions, contribution)
-			totalCollected += contribution.Amount
+			if contribution.Status == "paid" || contribution.Status == "partially_paid" {
+				totalCollected += contribution.Amount
+			}
 		}
 	}
 	for _, member := range store.Members {
@@ -201,9 +216,22 @@ func buildEventDashboardView(store *Store, eventID int) *EventDashboardView {
 		if memberView.Status == "" {
 			memberView.Status = "not_paid"
 		}
+		if filter != "" && filter != "all" {
+			if filter == "paid" {
+				if memberView.Status != "paid" && memberView.Status != "partially_paid" {
+					continue
+				}
+			} else if filter == "not_paid" {
+				if memberView.Status != "not_paid" && memberView.Status != "pending" {
+					continue
+				}
+			} else if memberView.Status != filter {
+				continue
+			}
+		}
 		members = append(members, memberView)
 	}
-	return &EventDashboardView{Event: event, Contributions: contributions, Members: members, TotalCollected: totalCollected}
+	return &EventDashboardView{Event: event, Contributions: contributions, Members: members, TotalCollected: totalCollected, Filter: filter}
 }
 
 func HandleMembers(w http.ResponseWriter, r *http.Request, store *Store) {
@@ -259,13 +287,21 @@ func HandleAttendance(w http.ResponseWriter, r *http.Request, store *Store) {
 		presentKey := "present_" + strconv.Itoa(member.ID)
 		duesKey := "dues_" + strconv.Itoa(member.ID)
 		absenteeismKey := "absenteeism_" + strconv.Itoa(member.ID)
+		lateKey := "late_" + strconv.Itoa(member.ID)
 		present := len(r.Form[presentKey]) > 0
 		duesPaid := len(r.Form[duesKey]) > 0
 		absenteeism := len(r.Form[absenteeismKey]) > 0
+		isLate := len(r.Form[lateKey]) > 0
 		status := attendanceStatusFromSelection(present, absenteeism)
 		if err := recordAttendanceAndDues(store, member.ID, meetingDate, status, note, duesPaid, 1000); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
+		}
+		if isLate {
+			if err := store.AddFine(Fine{MemberID: member.ID, Amount: store.Settings.LateFineAmount, Status: "outstanding", Reason: "Lateness", FineDate: meetingDate}); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 		}
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -291,6 +327,106 @@ func HandleDues(w http.ResponseWriter, r *http.Request, store *Store) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func HandleAddFine(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	memberID, err := strconv.Atoi(r.FormValue("member_id"))
+	if err != nil || memberID <= 0 {
+		http.Error(w, "valid member id is required", http.StatusBadRequest)
+		return
+	}
+	amount, err := strconv.ParseFloat(r.FormValue("amount"), 64)
+	if err != nil || amount <= 0 {
+		http.Error(w, "valid amount is required", http.StatusBadRequest)
+		return
+	}
+	reason := r.FormValue("reason")
+	if reason == "" {
+		http.Error(w, "reason is required", http.StatusBadRequest)
+		return
+	}
+	if err := store.AddFine(Fine{MemberID: memberID, Amount: amount, Status: "outstanding", Reason: reason, FineDate: r.FormValue("fine_date")}); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func HandleDeductFine(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	memberID, err := strconv.Atoi(r.FormValue("member_id"))
+	if err != nil || memberID <= 0 {
+		http.Error(w, "valid member id is required", http.StatusBadRequest)
+		return
+	}
+	if fineIDStr := r.FormValue("fine_id"); fineIDStr != "" {
+		fineID, err := strconv.Atoi(fineIDStr)
+		if err != nil || fineID <= 0 {
+			http.Error(w, "valid fine id is required", http.StatusBadRequest)
+			return
+		}
+		if err := store.DeductFineFromDues(memberID, fineID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		if err := store.DeductAllFinesFromDues(memberID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	http.Redirect(w, r, "/member-detail?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
+}
+
+func HandleMarkDuesPaid(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	memberID, err := strconv.Atoi(r.FormValue("member_id"))
+	if err != nil || memberID <= 0 {
+		http.Error(w, "valid member id is required", http.StatusBadRequest)
+		return
+	}
+	duesID, err := strconv.Atoi(r.FormValue("dues_id"))
+	if err != nil || duesID <= 0 {
+		http.Error(w, "valid dues id is required", http.StatusBadRequest)
+		return
+	}
+	if err := store.MarkDuesPaid(memberID, duesID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/member-detail?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
+}
+
+func HandleMarkContributionPaid(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	memberID, err := strconv.Atoi(r.FormValue("member_id"))
+	if err != nil || memberID <= 0 {
+		http.Error(w, "valid member id is required", http.StatusBadRequest)
+		return
+	}
+	eventID, err := strconv.Atoi(r.FormValue("event_id"))
+	if err != nil || eventID <= 0 {
+		http.Error(w, "valid event id is required", http.StatusBadRequest)
+		return
+	}
+	if err := store.MarkContributionPaid(memberID, eventID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/member-detail?member_id="+strconv.Itoa(memberID), http.StatusSeeOther)
 }
 
 func HandleEvents(w http.ResponseWriter, r *http.Request, store *Store) {
@@ -369,7 +505,8 @@ func HandleEventDetail(w http.ResponseWriter, r *http.Request, store *Store) {
 		http.Error(w, "valid event id is required", http.StatusBadRequest)
 		return
 	}
-	view := buildEventDashboardView(store, eventID)
+	filter := r.URL.Query().Get("filter")
+	view := buildEventDashboardView(store, eventID, filter)
 	if view == nil {
 		http.NotFound(w, r)
 		return
@@ -379,4 +516,54 @@ func HandleEventDetail(w http.ResponseWriter, r *http.Request, store *Store) {
 
 func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "ok")
+}
+
+func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	date := r.URL.Query().Get("date")
+	if date == "" {
+		http.Error(w, "date is required", http.StatusBadRequest)
+		return
+	}
+	filter := r.URL.Query().Get("filter")
+
+	recordMap := make(map[int]AttendanceRecord)
+	for _, record := range store.Attendance {
+		if record.MeetingDate == date {
+			recordMap[record.MemberID] = record
+		}
+	}
+
+	var records []AttendanceRecordView
+	for _, member := range store.Members {
+		rec, found := recordMap[member.ID]
+		status := "not_recorded"
+		note := ""
+		if found {
+			status = rec.Status
+			note = rec.Note
+		}
+		if filter != "" && status != filter {
+			continue
+		}
+		records = append(records, AttendanceRecordView{MemberName: member.Name, Status: status, Note: note})
+	}
+
+	view := AttendanceDetailView{MeetingDate: date, Records: records, Filter: filter}
+
+	tmpl, err := template.ParseFiles("templates/attendance_detail.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, view); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(buf.Bytes())
 }

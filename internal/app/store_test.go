@@ -6,16 +6,17 @@ import (
 	"testing"
 )
 
-func TestMemberBalanceIncludesOutstandingDuesAndFines(t *testing.T) {
+func TestMemberBalanceUsesDuesPaidMinusDuesOwedMinusFinesOwed(t *testing.T) {
 	store := NewStore()
 	store.Settings.AbsenceFineAmount = 25
 
-	store.Dues = append(store.Dues, DuesRecord{MemberID: 1, Amount: 100, Status: "pending"})
+	store.Dues = append(store.Dues, DuesRecord{MemberID: 1, Amount: 100, Status: "paid"})
+	store.Dues = append(store.Dues, DuesRecord{MemberID: 1, Amount: 50, Status: "pending"})
 	store.Fines = append(store.Fines, Fine{MemberID: 1, Amount: 30, Status: "outstanding"})
 
 	balance := store.MemberBalance(1)
-	if balance != 130 {
-		t.Fatalf("expected balance 130, got %.2f", balance)
+	if balance != 20 {
+		t.Fatalf("expected balance 20 (100 paid - 50 owed - 30 fines), got %.2f", balance)
 	}
 }
 
@@ -41,10 +42,11 @@ func TestRecordAttendanceCreatesFineForUnapprovedAbsence(t *testing.T) {
 func TestMemberDashboardSummaryAggregatesMemberData(t *testing.T) {
 	store := NewStore()
 	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	store.Events = []Event{{ID: 1, Title: "Test Event", MinAmountExpected: 50}}
 	store.Attendance = []AttendanceRecord{{MemberID: 1, MeetingDate: "2026-07-01", Status: "present"}, {MemberID: 1, MeetingDate: "2026-07-02", Status: "absent_without_permission"}}
 	store.Dues = []DuesRecord{{MemberID: 1, Amount: 100, Status: "paid"}, {MemberID: 1, Amount: 50, Status: "pending"}}
 	store.Fines = []Fine{{MemberID: 1, Amount: 20, Status: "paid", Reason: "late coming"}, {MemberID: 1, Amount: 30, Status: "outstanding", Reason: "misconduct"}}
-	store.Contributions = []Contribution{{MemberID: 1, Amount: 40, Status: "paid"}, {MemberID: 1, Amount: 25, Status: "pending"}}
+	store.Contributions = []Contribution{{EventID: 1, MemberID: 1, Amount: 40, Status: "paid"}, {EventID: 1, MemberID: 1, Amount: 25, Status: "pending"}}
 
 	summary := store.MemberDashboardSummary(1, 30)
 	if summary.AttendancePresent != 1 {
@@ -170,5 +172,146 @@ func TestStorePersistsMembersAndAttendance(t *testing.T) {
 	}
 	if _, err := os.Stat(dbPath); err != nil {
 		t.Fatalf("database file should exist: %v", err)
+	}
+}
+
+func TestAddEventCreatesPendingContributionsForAllMembers(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{
+		{ID: 1, Name: "Ada"},
+		{ID: 2, Name: "Bob"},
+	}
+
+	err := store.AddEvent(Event{Title: "Fundraiser", MinAmountExpected: 100, Status: "open"})
+	if err != nil {
+		t.Fatalf("add event returned error: %v", err)
+	}
+
+	if len(store.Contributions) != 2 {
+		t.Fatalf("expected 2 contributions (one per member), got %d", len(store.Contributions))
+	}
+
+	for _, c := range store.Contributions {
+		if c.Amount != 100 {
+			t.Fatalf("expected contribution amount 100, got %.2f", c.Amount)
+		}
+		if c.Status != "pending" {
+			t.Fatalf("expected pending contribution status, got %s", c.Status)
+		}
+	}
+}
+
+func TestAddContributionRejectsAmountBelowMinimum(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	if err := store.AddEvent(Event{Title: "Event", MinAmountExpected: 50, Status: "open"}); err != nil {
+		t.Fatalf("add event: %v", err)
+	}
+
+	err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 30, Status: "paid"})
+	if err == nil {
+		t.Fatal("expected error for amount below minimum, got nil")
+	}
+}
+
+func TestAddContributionAllowsAmountAboveMinimum(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	if err := store.AddEvent(Event{Title: "Event", MinAmountExpected: 50, Status: "open"}); err != nil {
+		t.Fatalf("add event: %v", err)
+	}
+
+	err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 75, Status: "paid"})
+	if err != nil {
+		t.Fatalf("expected no error for amount above minimum, got: %v", err)
+	}
+}
+
+func TestEventTitle(t *testing.T) {
+	store := NewStore()
+	store.Events = []Event{{ID: 1, Title: "Fundraiser"}, {ID: 2, Title: "Party"}}
+
+	if title := store.EventTitle(1); title != "Fundraiser" {
+		t.Fatalf("expected 'Fundraiser', got %q", title)
+	}
+	if title := store.EventTitle(2); title != "Party" {
+		t.Fatalf("expected 'Party', got %q", title)
+	}
+	if title := store.EventTitle(99); title != "Event #99" {
+		t.Fatalf("expected 'Event #99', got %q", title)
+	}
+}
+
+func TestAddContributionAccumulatesOnSubsequentPayment(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	if err := store.AddEvent(Event{Title: "Event", MinAmountExpected: 50, Status: "open"}); err != nil {
+		t.Fatalf("add event: %v", err)
+	}
+
+	err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 50, Status: "paid"})
+	if err != nil {
+		t.Fatalf("first contribution: %v", err)
+	}
+
+	err = store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 30, Status: "paid"})
+	if err != nil {
+		t.Fatalf("second contribution: %v", err)
+	}
+
+	found := false
+	for _, c := range store.Contributions {
+		if c.EventID == 1 && c.MemberID == 1 {
+			if c.Amount != 80 {
+				t.Fatalf("expected accumulated amount 80, got %.2f", c.Amount)
+			}
+			if c.Status != "paid" {
+				t.Fatalf("expected status 'paid', got %q", c.Status)
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("contribution not found")
+	}
+}
+
+func TestAddContributionRejectsBelowMinOnFirstPayment(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	if err := store.AddEvent(Event{Title: "Event", MinAmountExpected: 50, Status: "open"}); err != nil {
+		t.Fatalf("add event: %v", err)
+	}
+
+	err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 30, Status: "paid"})
+	if err == nil {
+		t.Fatal("expected error for first payment below minimum, got nil")
+	}
+}
+
+func TestAddContributionAllowsSmallSubsequentPaymentAfterMinimumMet(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{{ID: 1, Name: "Ada"}}
+	if err := store.AddEvent(Event{Title: "Event", MinAmountExpected: 50, Status: "open"}); err != nil {
+		t.Fatalf("add event: %v", err)
+	}
+
+	if err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 50, Status: "paid"}); err != nil {
+		t.Fatalf("first payment: %v", err)
+	}
+
+	err := store.AddContribution(Contribution{EventID: 1, MemberID: 1, Amount: 5, Status: "paid"})
+	if err != nil {
+		t.Fatalf("subsequent small payment should be allowed, got: %v", err)
+	}
+
+	for _, c := range store.Contributions {
+		if c.EventID == 1 && c.MemberID == 1 {
+			if c.Amount != 55 {
+				t.Fatalf("expected accumulated amount 55, got %.2f", c.Amount)
+			}
+			break
+		}
 	}
 }
