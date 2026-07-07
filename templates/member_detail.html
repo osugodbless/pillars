@@ -29,13 +29,13 @@
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Dues</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.DuesPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.DuesOwed}}</p>
+        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.DuesPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.DuesOwed}}</p>
         <ul id="dues-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Dues}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
-              <span>{{.DueDate}} · {{.Status}} · {{printf "%.2f" .Amount}}</span>
+              <span>{{.DueDate}} · {{.Status}} · ₦{{printf "%.2f" .Amount}}</span>
               {{if or (eq .Status "pending") (eq .Status "owed") (eq .Status "partially_paid")}}
               <form hx-post="/mark-dues-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
@@ -55,8 +55,8 @@
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Fines</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.FinesPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.FinesOwed}}</p>
+        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.FinesPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.FinesOwed}}</p>
         {{if gt .View.Summary.FinesOwed 0.0}}
         <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="mt-3">
           <input type="hidden" name="member_id" value="{{.View.Member.ID}}" />
@@ -67,7 +67,7 @@
           {{range .View.Fines}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
-              <span>{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}} · {{printf "%.2f" .Amount}} · {{.Status}}</span>
+              <span>{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}} · ₦{{printf "%.2f" .Amount}} · {{.Status}}</span>
               {{if eq .Status "outstanding"}}
               <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
@@ -87,13 +87,13 @@
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
         <h2 class="text-lg font-semibold">Contributions</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: {{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: {{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
+        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
+        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
         <ul id="contributions-list" class="mt-3 space-y-2 text-sm text-slate-300">
           {{range .View.Contributions}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
-              <span>{{$.Store.EventTitle .EventID}} · {{printf "%.2f" .Amount}} · {{.Status}}</span>
+              <span>{{$.Store.EventTitle .EventID}} · ₦{{printf "%.2f" .Amount}} · {{.Status}}</span>
               {{if eq .Status "pending"}}
               <form hx-post="/mark-contribution-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />

@@ -23,8 +23,7 @@ type PageData struct {
 type StatsView struct {
 	TotalMembers       int
 	ProbationMembers   int
-	OutstandingBalance float64
-	OpenEvents         int
+	OpenEvents int
 	OutstandingFines   int
 	TotalDuesPaid      float64
 	TotalDuesOwed      float64
@@ -104,7 +103,6 @@ func buildPageData(store *Store) PageData {
 		if member.Status == "probation" {
 			stats.ProbationMembers++
 		}
-		stats.OutstandingBalance += store.MemberBalance(member.ID)
 	}
 	for _, event := range store.Events {
 		if event.Status == "open" {

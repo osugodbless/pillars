@@ -7,8 +7,8 @@
       <p class="mt-2 text-slate-300">{{.Event.Description}}</p>
       <div class="mt-4 flex flex-wrap gap-2">
         <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">{{.Event.Status}}</span>
-        <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">Minimum Expected: {{printf "%.2f" .Event.MinAmountExpected}}</span>
-        <span id="total-collected" class="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-200">Collected: {{printf "%.2f" .TotalCollected}}</span>
+        <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">Minimum Expected: ₦{{printf "%.2f" .Event.MinAmountExpected}}</span>
+        <span id="total-collected" class="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-200">Collected: ₦{{printf "%.2f" .TotalCollected}}</span>
       </div>
     </div>
 
@@ -38,7 +38,7 @@
           <p class="font-medium text-slate-100">{{.Name}}</p>
           <p class="text-sm text-slate-400">{{.Email}}</p>
           <div class="mt-2 flex items-center justify-between">
-            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid {{printf "%.2f" .Balance}}{{else if eq .Status "partially_paid"}}Partial {{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
+            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid ₦{{printf "%.2f" .Balance}}{{else if eq .Status "partially_paid"}}Partial ₦{{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
             <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs uppercase tracking-wide text-slate-300">{{.Status}}</span>
           </div>
         </div>
