@@ -14,6 +14,8 @@ These are at-a-glance metrics that give the admin an immediate understanding of 
 - **At-Risk Members Count:** Number of members whose outstanding balances exceed a certain threshold (e.g., owing more than 3 months of dues or having high unapproved absence fines).
 
 ---
+EXPORT ATTENDANCE FOR A SELECTED PERIOD
+EXPORTCONTRIBUTIONS DATA
 
 ## 2. Recommended PDF Statements
 
