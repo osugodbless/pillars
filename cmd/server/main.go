@@ -51,6 +51,9 @@ func main() {
 	mux.HandleFunc("/deduct-fine", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleDeductFine(w, r, store)
 	})
+	mux.HandleFunc("/mark-fine-paid", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleMarkFinePaid(w, r, store)
+	})
 	mux.HandleFunc("/mark-dues-paid", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleMarkDuesPaid(w, r, store)
 	})
@@ -62,6 +65,15 @@ func main() {
 	})
 	mux.HandleFunc("/export-contributions", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleExportContributionsPDF(w, r, store)
+	})
+	mux.HandleFunc("/settle-event", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleSettleEvent(w, r, store)
+	})
+	mux.HandleFunc("/promote-to-active", func(w http.ResponseWriter, r *http.Request) {
+		app.HandlePromoteToActive(w, r, store)
+	})
+	mux.HandleFunc("/extend-probation", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleExtendProbation(w, r, store)
 	})
 	mux.HandleFunc("/delete-member", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleDeleteMember(w, r, store)

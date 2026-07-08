@@ -15,6 +15,16 @@
       </div>
     </div>
 
+    {{if .CanSettle}}
+    <div class="mt-6 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-xl">
+      <h2 class="text-xl font-semibold text-amber-200">Settlement</h2>
+      <p class="mt-1 text-sm text-amber-300/70">All members have contributed. Ready to settle this event.</p>
+      <button onclick="document.getElementById('settle-modal').classList.remove('hidden')" class="mt-3 rounded-xl bg-amber-500/20 border border-amber-400/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/30">
+        Settle Event
+      </button>
+    </div>
+    {{end}}
+
     <div class="mt-6 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
       <h2 class="text-xl font-semibold">Record event payment</h2>
       <form hx-post="/contributions" hx-target="#event-content" hx-swap="outerHTML" class="mt-4 grid gap-3 md:grid-cols-2">
@@ -40,13 +50,24 @@
           <p class="font-medium text-slate-100">{{.Name}}</p>
           <p class="text-sm text-slate-400">{{.Email}}</p>
           <div class="mt-2 flex items-center justify-between">
-            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid ₦{{printf "%.2f" .Balance}}{{else if eq .Status "partially_paid"}}Partial ₦{{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
+            <p class="text-sm {{if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else if eq .Status "settled"}}text-purple-300{{else}}text-amber-300{{end}}">{{if eq .Status "paid"}}Paid ₦{{printf "%.2f" .Balance}}{{else if eq .Status "partially_paid"}}Partial ₦{{printf "%.2f" .Balance}}{{else if eq .Status "settled"}}Settled ₦{{printf "%.2f" .Balance}}{{else}}Not paid{{end}}</p>
             <span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs uppercase tracking-wide text-slate-300">{{.Status}}</span>
           </div>
         </div>
         {{else}}
         <p class="text-sm text-slate-400">No payments recorded yet.</p>
         {{end}}
+      </div>
+    </div>
+  </div>
+
+  <div id="settle-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
+    <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
+      <h3 class="text-lg font-semibold">Settle Event</h3>
+      <p class="mt-2 text-sm text-slate-300">Are you sure? This will mark the event as settled and automatically deduct the total collected from the treasury balance. Members with paid contributions will show as settled.</p>
+      <div class="mt-5 flex justify-end gap-3">
+        <button onclick="document.getElementById('settle-modal').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">No</button>
+        <button hx-post="/settle-event" hx-vals='{"event_id":"{{.Event.ID}}"}' hx-target="#event-content" hx-swap="outerHTML" onclick="document.getElementById('settle-modal').classList.add('hidden')" class="rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-400">Yes</button>
       </div>
     </div>
   </div>

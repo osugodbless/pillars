@@ -227,7 +227,7 @@ func (s *Store) MemberDashboardSummary(memberID int, days int) MemberDashboardSu
 		if contribution.MemberID != memberID {
 			continue
 		}
-		if contribution.Status == "paid" || contribution.Status == "partially_paid" {
+		if contribution.Status == "paid" || contribution.Status == "partially_paid" || contribution.Status == "settled" {
 			summary.ContributionsPaid += contribution.Amount
 		} else {
 			summary.ContributionsOwed += contribution.Amount
@@ -302,6 +302,12 @@ func (s *Store) CreateMember(member Member) error {
 	if member.Name == "" {
 		return fmt.Errorf("member name is required")
 	}
+	if member.Status == "probation" && member.ProbationEnds == "" {
+		joinedAt, err := time.Parse(time.RFC3339, member.JoinedAt)
+		if err == nil {
+			member.ProbationEnds = joinedAt.AddDate(0, 0, s.Settings.ProbationPeriodDays).Format("2006-01-02")
+		}
+	}
 	if s.db != nil {
 		result, err := s.db.Exec(`INSERT INTO members(name, email, phone, status, joined_at, is_bonafide, probation_ends) VALUES (?, ?, ?, ?, ?, ?, ?)`, member.Name, member.Email, member.Phone, member.Status, member.JoinedAt, boolToInt(member.IsBonafide), member.ProbationEnds)
 		if err != nil {
@@ -319,6 +325,63 @@ func (s *Store) CreateMember(member Member) error {
 	member.JoinedAt = member.JoinedAt
 	s.Members = append(s.Members, member)
 	return nil
+}
+
+func (s *Store) ProbationReviewDue() []Member {
+	today := time.Now().Format("2006-01-02")
+	var due []Member
+	for _, member := range s.Members {
+		if member.Status == "probation" && member.ProbationEnds != "" && member.ProbationEnds <= today {
+			due = append(due, member)
+		}
+	}
+	return due
+}
+
+func (s *Store) PromoteToActive(memberID int) error {
+	for i := range s.Members {
+		if s.Members[i].ID == memberID {
+			if s.Members[i].Status != "probation" {
+				return fmt.Errorf("member is not on probation")
+			}
+			if s.db != nil {
+				if _, err := s.db.Exec(`UPDATE members SET status = 'active', is_bonafide = 1 WHERE id = ?`, memberID); err != nil {
+					return err
+				}
+			}
+			s.Members[i].Status = "active"
+			s.Members[i].IsBonafide = true
+			return nil
+		}
+	}
+	return fmt.Errorf("member not found")
+}
+
+func (s *Store) ExtendProbation(memberID int, months int) error {
+	for i := range s.Members {
+		if s.Members[i].ID == memberID {
+			if s.Members[i].Status != "probation" {
+				return fmt.Errorf("member is not on probation")
+			}
+			currentEnd := s.Members[i].ProbationEnds
+			if currentEnd == "" {
+				currentEnd = time.Now().Format("2006-01-02")
+			}
+			parsed, err := time.Parse("2006-01-02", currentEnd)
+			if err != nil {
+				return fmt.Errorf("invalid probation end date")
+			}
+			newEnd := parsed.AddDate(0, months, 0).Format("2006-01-02")
+			if s.db != nil {
+				if _, err := s.db.Exec(`UPDATE members SET probation_ends = ? WHERE id = ?`, newEnd, memberID); err != nil {
+					return err
+				}
+			}
+			s.Members[i].ProbationEnds = newEnd
+			return nil
+		}
+	}
+	return fmt.Errorf("member not found")
 }
 
 func (s *Store) AddDues(d DuesRecord) error {
@@ -357,6 +420,21 @@ func (s *Store) AddFine(f Fine) error {
 	f.ID = len(s.Fines) + 1
 	s.Fines = append(s.Fines, f)
 	return nil
+}
+
+func (s *Store) MarkFinePaid(memberID int, fineID int) error {
+	for i := range s.Fines {
+		if s.Fines[i].ID == fineID && s.Fines[i].MemberID == memberID && s.Fines[i].Status == "outstanding" {
+			if s.db != nil {
+				if _, err := s.db.Exec(`UPDATE fines SET status = 'paid' WHERE id = ?`, s.Fines[i].ID); err != nil {
+					return err
+				}
+			}
+			s.Fines[i].Status = "paid"
+			return nil
+		}
+	}
+	return fmt.Errorf("outstanding fine not found")
 }
 
 func (s *Store) MarkDuesPaid(memberID int, duesID int) error {
@@ -461,6 +539,47 @@ func (s *Store) MarkContributionPaid(memberID int, eventID int) error {
 		s.Dues = append(s.Dues, DuesRecord{ID: len(s.Dues) + 1, MemberID: memberID, Amount: remaining, Status: "owed"})
 	}
 	s.Contributions[contributionIdx].Status = "paid"
+	return nil
+}
+
+func (s *Store) MarkEventSettled(eventID int) error {
+	eventIdx := -1
+	for i := range s.Events {
+		if s.Events[i].ID == eventID {
+			eventIdx = i
+			break
+		}
+	}
+	if eventIdx == -1 {
+		return fmt.Errorf("event not found")
+	}
+	if s.Events[eventIdx].Status != "open" {
+		return fmt.Errorf("event is not open")
+	}
+
+	for _, contrib := range s.Contributions {
+		if contrib.EventID == eventID && contrib.Status == "pending" {
+			return fmt.Errorf("not all members have contributed yet")
+		}
+	}
+
+	if s.db != nil {
+		if _, err := s.db.Exec(`UPDATE events SET status = 'settled' WHERE id = ?`, eventID); err != nil {
+			return err
+		}
+	}
+	s.Events[eventIdx].Status = "settled"
+
+	for i := range s.Contributions {
+		if s.Contributions[i].EventID == eventID && (s.Contributions[i].Status == "paid" || s.Contributions[i].Status == "partially_paid") {
+			if s.db != nil {
+				if _, err := s.db.Exec(`UPDATE contributions SET status = 'settled' WHERE id = ?`, s.Contributions[i].ID); err != nil {
+					return err
+				}
+			}
+			s.Contributions[i].Status = "settled"
+		}
+	}
 	return nil
 }
 
