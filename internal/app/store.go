@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -656,6 +658,9 @@ func (s *Store) AddEvent(ev Event) error {
 		ev.ID = int(id)
 		s.Events = append(s.Events, ev)
 		for _, member := range s.Members {
+			if member.Status == "ex-member" {
+				continue
+			}
 			contributionResult, err := s.db.Exec(`INSERT INTO contributions(event_id, member_id, amount, status) VALUES (?, ?, ?, ?)`, ev.ID, member.ID, ev.MinAmountExpected, "pending")
 			if err != nil {
 				return err
@@ -671,7 +676,26 @@ func (s *Store) AddEvent(ev Event) error {
 	ev.ID = len(s.Events) + 1
 	s.Events = append(s.Events, ev)
 	for _, member := range s.Members {
+		if member.Status == "ex-member" {
+			continue
+		}
 		s.Contributions = append(s.Contributions, Contribution{ID: len(s.Contributions) + 1, EventID: ev.ID, MemberID: member.ID, Amount: ev.MinAmountExpected, Status: "pending"})
+	}
+	return nil
+}
+
+func (s *Store) DeleteMember(memberID int) error {
+	if s.db != nil {
+		_, err := s.db.Exec(`UPDATE members SET status = 'ex-member' WHERE id = ?`, memberID)
+		if err != nil {
+			return err
+		}
+	}
+	for i, member := range s.Members {
+		if member.ID == memberID {
+			s.Members[i].Status = "ex-member"
+			break
+		}
 	}
 	return nil
 }
@@ -797,6 +821,102 @@ func (s *Store) listAttendanceFromDB() ([]AttendanceRecord, error) {
 		records = append(records, record)
 	}
 	return records, rows.Err()
+}
+
+func (s *Store) TotalTreasuryBalance() float64 {
+	balance := 0.0
+	for _, due := range s.Dues {
+		if due.Status == "paid" || due.Status == "partially_paid" {
+			balance += due.Amount
+		}
+	}
+	for _, fine := range s.Fines {
+		if fine.Status == "paid" {
+			balance += fine.Amount
+		}
+	}
+	for _, contrib := range s.Contributions {
+		if contrib.Status == "paid" || contrib.Status == "partially_paid" {
+			balance += contrib.Amount
+		}
+	}
+	return balance
+}
+
+func (s *Store) TotalOutstandingReceivables() float64 {
+	owed := 0.0
+	for _, due := range s.Dues {
+		if due.Status == "pending" || due.Status == "owed" {
+			owed += due.Amount
+		}
+	}
+	for _, fine := range s.Fines {
+		if fine.Status == "outstanding" {
+			owed += fine.Amount
+		}
+	}
+	for _, contrib := range s.Contributions {
+		if contrib.Status == "pending" || contrib.Status == "not_paid" {
+			owed += contrib.Amount
+		}
+	}
+	return owed
+}
+
+func (s *Store) AtRiskMembersCount() int {
+	count := 0
+	for _, member := range s.Members {
+		duesOwed := 0.0
+		for _, due := range s.Dues {
+			if due.MemberID == member.ID && (due.Status == "pending" || due.Status == "owed") {
+				duesOwed += due.Amount
+			}
+		}
+
+		has3MonthsDues := duesOwed > 3*s.Settings.DuesAmount
+
+		var fineDates []time.Time
+		for _, fine := range s.Fines {
+			if fine.MemberID == member.ID && fine.Status == "outstanding" && fine.Reason == "Unapproved absence" {
+				t, err := time.Parse("2006-01-02", fine.FineDate)
+				if err == nil {
+					fineDates = append(fineDates, t)
+				}
+			}
+		}
+
+		has3ConsecutiveMonths := false
+		if len(fineDates) >= 3 {
+			sort.Slice(fineDates, func(i, j int) bool {
+				return fineDates[i].Before(fineDates[j])
+			})
+			var months []time.Time
+			for _, d := range fineDates {
+				m := time.Date(d.Year(), d.Month(), 1, 0, 0, 0, 0, time.UTC)
+				if len(months) == 0 || !months[len(months)-1].Equal(m) {
+					months = append(months, m)
+				}
+			}
+			consecutive := 1
+			for i := 1; i < len(months); i++ {
+				expectedNext := months[i-1].AddDate(0, 1, 0)
+				if months[i].Equal(expectedNext) {
+					consecutive++
+					if consecutive >= 3 {
+						has3ConsecutiveMonths = true
+						break
+					}
+				} else {
+					consecutive = 1
+				}
+			}
+		}
+
+		if has3MonthsDues && has3ConsecutiveMonths {
+			count++
+		}
+	}
+	return count
 }
 
 func (s *Store) listDuesFromDB() ([]DuesRecord, error) {

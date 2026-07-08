@@ -1,7 +1,10 @@
 {{define "content"}}
 <div id="event-content">
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
+    <div class="flex items-center justify-between">
+      <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
+      <a href="/export-contributions?event_id={{.Event.ID}}" class="rounded-xl bg-indigo-500/20 border border-indigo-400/30 px-4 py-2 text-sm font-semibold text-indigo-300 transition hover:bg-indigo-500/30">Download Contributions PDF</a>
+    </div>
     <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
       <h1 class="text-3xl font-semibold">{{.Event.Title}}</h1>
       <p class="mt-2 text-slate-300">{{.Event.Description}}</p>
@@ -29,7 +32,6 @@
         <button hx-get="/event-detail?event_id={{.Event.ID}}" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if or (eq .Filter "") (eq .Filter "all")}}bg-cyan-500/20 text-cyan-200{{else}}bg-slate-900/70 text-slate-300{{end}}">All</button>
         <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "paid"}}bg-emerald-500/20 text-emerald-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Paid</button>
         <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=not_paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "not_paid"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Not paid</button>
-        <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=pending" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "pending"}}bg-amber-500/20 text-amber-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Pending</button>
         <button hx-get="/event-detail?event_id={{.Event.ID}}&filter=partially_paid" hx-target="#event-content" hx-swap="outerHTML" class="rounded-full border border-white/10 px-4 py-1.5 text-sm transition hover:border-cyan-400/40 {{if eq .Filter "partially_paid"}}bg-blue-500/20 text-blue-200{{else}}bg-slate-900/70 text-slate-300{{end}}">Partial</button>
       </div>
       <div class="mt-4 grid gap-3 md:grid-cols-2">

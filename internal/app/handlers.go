@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jung-kurt/gofpdf"
 )
 
 type PageData struct {
@@ -21,15 +23,27 @@ type PageData struct {
 }
 
 type StatsView struct {
-	TotalMembers       int
-	ProbationMembers   int
-	OpenEvents int
-	OutstandingFines   int
-	TotalDuesPaid      float64
-	TotalDuesOwed      float64
-	TotalFines         float64
-	FinesOwed          float64
-	FinesPaid          float64
+	TotalMembers                int
+	ProbationMembers            int
+	OpenEvents                  int
+	OutstandingFines            int
+	TotalDuesPaid               float64
+	TotalDuesOwed               float64
+	TotalFines                  float64
+	FinesOwed                   float64
+	FinesPaid                   float64
+	TotalTreasuryBalance        float64
+	TotalOutstandingReceivables float64
+	AtRiskMembersCount          int
+	EventFundingProgress        []EventFundingView
+}
+
+type EventFundingView struct {
+	EventID        int
+	Title          string
+	TotalCollected float64
+	GoalAmount     float64
+	Percentage     float64
 }
 
 type MemberView struct {
@@ -81,6 +95,9 @@ type AttendanceDetailView struct {
 func buildPageData(store *Store) PageData {
 	memberViews := make([]MemberView, 0, len(store.Members))
 	for _, member := range store.Members {
+		if member.Status == "ex-member" {
+			continue
+		}
 		memberViews = append(memberViews, MemberView{ID: member.ID, Name: member.Name, Email: member.Email, Phone: member.Phone, Status: member.Status, Balance: store.MemberBalance(member.ID)})
 	}
 
@@ -129,6 +146,40 @@ func buildPageData(store *Store) PageData {
 		}
 	}
 	stats.TotalFines = stats.FinesOwed + stats.FinesPaid
+
+	stats.TotalTreasuryBalance = store.TotalTreasuryBalance()
+	stats.TotalOutstandingReceivables = store.TotalOutstandingReceivables()
+	stats.AtRiskMembersCount = store.AtRiskMembersCount()
+
+	for _, event := range store.Events {
+		if event.Status == "open" {
+			collected := 0.0
+			expectedCount := 0
+			for _, contrib := range store.Contributions {
+				if contrib.EventID == event.ID {
+					expectedCount++
+					if contrib.Status == "paid" || contrib.Status == "partially_paid" {
+						collected += contrib.Amount
+					}
+				}
+			}
+			goal := event.MinAmountExpected * float64(expectedCount)
+			percentage := 0.0
+			if goal > 0 {
+				percentage = (collected / goal) * 100
+				if percentage > 100 {
+					percentage = 100
+				}
+			}
+			stats.EventFundingProgress = append(stats.EventFundingProgress, EventFundingView{
+				EventID:        event.ID,
+				Title:          event.Title,
+				TotalCollected: collected,
+				GoalAmount:     goal,
+				Percentage:     percentage,
+			})
+		}
+	}
 
 	return PageData{Members: memberViews, Attendance: attendanceViews, AttendanceGroups: attendanceGroups, Events: store.Events, Fines: store.Fines, Dues: store.Dues, Contributions: store.Contributions, Stats: stats}
 }
@@ -240,7 +291,7 @@ func buildEventDashboardView(store *Store, eventID int, filter string) *EventDas
 				break
 			}
 		}
-		if memberView.Status == "" {
+		if memberView.Status == "" || memberView.Status == "pending" {
 			memberView.Status = "not_paid"
 		}
 		if filter != "" && filter != "all" {
@@ -249,7 +300,7 @@ func buildEventDashboardView(store *Store, eventID int, filter string) *EventDas
 					continue
 				}
 			} else if filter == "not_paid" {
-				if memberView.Status != "not_paid" && memberView.Status != "pending" {
+				if memberView.Status != "not_paid" {
 					continue
 				}
 			} else if memberView.Status != filter {
@@ -358,6 +409,9 @@ func HandleAttendance(w http.ResponseWriter, r *http.Request, store *Store) {
 
 	note := r.FormValue("note")
 	for _, member := range store.Members {
+		if member.Status == "ex-member" {
+			continue
+		}
 		presentKey := "present_" + strconv.Itoa(member.ID)
 		duesKey := "dues_" + strconv.Itoa(member.ID)
 		absenteeismKey := "absenteeism_" + strconv.Itoa(member.ID)
@@ -781,4 +835,151 @@ func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_, _ = w.Write(buf.Bytes())
+}
+
+func HandleExportAttendancePDF(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	startDate := r.URL.Query().Get("start_date")
+	endDate := r.URL.Query().Get("end_date")
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 16)
+	pdf.Cell(40, 10, "Attendance Report")
+	pdf.Ln(12)
+
+	if startDate != "" && endDate != "" {
+		pdf.SetFont("Arial", "", 12)
+		pdf.Cell(40, 10, fmt.Sprintf("Period: %s to %s", startDate, endDate))
+		pdf.Ln(10)
+	}
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(60, 10, "Member Name", "1", 0, "", false, 0, "")
+	pdf.CellFormat(30, 10, "Date", "1", 0, "", false, 0, "")
+	pdf.CellFormat(65, 10, "Status", "1", 0, "", false, 0, "")
+	pdf.CellFormat(35, 10, "Active?", "1", 0, "", false, 0, "")
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 12)
+	for _, record := range store.Attendance {
+		if startDate != "" && record.MeetingDate < startDate {
+			continue
+		}
+		if endDate != "" && record.MeetingDate > endDate {
+			continue
+		}
+		memberName := "Unknown"
+		memberStatus := "Unknown"
+		for _, m := range store.Members {
+			if m.ID == record.MemberID {
+				memberName = m.Name
+				memberStatus = m.Status
+				break
+			}
+		}
+		pdf.CellFormat(60, 10, memberName, "1", 0, "", false, 0, "")
+		pdf.CellFormat(30, 10, record.MeetingDate, "1", 0, "", false, 0, "")
+		pdf.CellFormat(65, 10, record.Status, "1", 0, "", false, 0, "")
+		pdf.CellFormat(35, 10, memberStatus, "1", 0, "", false, 0, "")
+		pdf.Ln(-1)
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", `attachment; filename="attendance_report.pdf"`)
+	err := pdf.Output(w)
+	if err != nil {
+		http.Error(w, "failed to generate PDF", http.StatusInternalServerError)
+	}
+}
+
+func HandleDeleteMember(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	memberIDStr := r.FormValue("member_id")
+	memberID, err := strconv.Atoi(memberIDStr)
+	if err != nil {
+		http.Error(w, "Invalid member ID", http.StatusBadRequest)
+		return
+	}
+	err = store.DeleteMember(memberID)
+	if err != nil {
+		http.Error(w, "Failed to delete member", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("HX-Redirect", "/")
+	w.WriteHeader(http.StatusOK)
+}
+
+func HandleExportContributionsPDF(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	eventIDStr := r.URL.Query().Get("event_id")
+	eventID, err := strconv.Atoi(eventIDStr)
+	if err != nil || eventID <= 0 {
+		http.Error(w, "valid event id is required", http.StatusBadRequest)
+		return
+	}
+
+	var targetEvent Event
+	found := false
+	for _, e := range store.Events {
+		if e.ID == eventID {
+			targetEvent = e
+			found = true
+			break
+		}
+	}
+	if !found {
+		http.Error(w, "event not found", http.StatusNotFound)
+		return
+	}
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetFont("Arial", "B", 16)
+	pdf.Cell(40, 10, fmt.Sprintf("Contributions Report: %s", targetEvent.Title))
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "B", 12)
+	pdf.CellFormat(60, 10, "Member Name", "1", 0, "", false, 0, "")
+	pdf.CellFormat(40, 10, "Status", "1", 0, "", false, 0, "")
+	pdf.CellFormat(40, 10, "Amount", "1", 0, "", false, 0, "")
+	pdf.Ln(-1)
+
+	pdf.SetFont("Arial", "", 12)
+	for _, member := range store.Members {
+		status := "not_paid"
+		amount := 0.0
+		for _, contrib := range store.Contributions {
+			if contrib.EventID == eventID && contrib.MemberID == member.ID {
+				status = contrib.Status
+				amount = contrib.Amount
+				break
+			}
+		}
+		if status == "pending" {
+			status = "not_paid"
+		}
+		if status == "not_paid" {
+			amount = 0.0
+		}
+		pdf.CellFormat(60, 10, member.Name, "1", 0, "", false, 0, "")
+		pdf.CellFormat(40, 10, status, "1", 0, "", false, 0, "")
+		pdf.CellFormat(40, 10, fmt.Sprintf("%.2f", amount), "1", 0, "", false, 0, "")
+		pdf.Ln(-1)
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="contributions_event_%d.pdf"`, eventID))
+	if err := pdf.Output(w); err != nil {
+		http.Error(w, "failed to generate PDF", http.StatusInternalServerError)
+	}
 }

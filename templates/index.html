@@ -25,14 +25,26 @@
         <p class="mt-2 text-3xl font-semibold">{{.Stats.ProbationMembers}}</p>
       </div>
       <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
+        <p class="text-sm text-slate-400">At-Risk members</p>
+        <p class="mt-2 text-3xl font-semibold text-rose-400">{{.Stats.AtRiskMembersCount}}</p>
+      </div>
+      <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
         <p class="text-sm text-slate-400">Open events</p>
         <p class="mt-2 text-3xl font-semibold">{{.Stats.OpenEvents}}</p>
       </div>
     </section>
 
     <section class="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-      <h2 class="text-xl font-semibold">Financial summary</h2>
-      <div class="mt-4 grid gap-4 sm:grid-cols-3">
+      <h2 class="text-xl font-semibold">Treasury & Financial summary</h2>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl border border-cyan-400/30 bg-cyan-950/40 p-4 lg:col-span-2">
+          <p class="text-sm text-cyan-200">Total Treasury Balance</p>
+          <p class="mt-1 text-3xl font-semibold text-cyan-300">₦{{printf "%.2f" .Stats.TotalTreasuryBalance}}</p>
+        </div>
+        <div class="rounded-2xl border border-orange-400/30 bg-orange-950/40 p-4 lg:col-span-2">
+          <p class="text-sm text-orange-200">Total Outstanding Receivables (Arrears)</p>
+          <p class="mt-1 text-3xl font-semibold text-orange-300">₦{{printf "%.2f" .Stats.TotalOutstandingReceivables}}</p>
+        </div>
         <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
           <p class="text-sm text-slate-400">Total dues paid</p>
           <p class="mt-1 text-2xl font-semibold text-emerald-300">₦{{printf "%.2f" .Stats.TotalDuesPaid}}</p>
@@ -41,7 +53,7 @@
           <p class="text-sm text-slate-400">Total dues owed</p>
           <p class="mt-1 text-2xl font-semibold text-amber-300">₦{{printf "%.2f" .Stats.TotalDuesOwed}}</p>
         </div>
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4 lg:col-span-2">
           <p class="text-sm text-slate-400">Total fines</p>
           <p class="mt-1 text-2xl font-semibold text-red-300">₦{{printf "%.2f" .Stats.TotalFines}}</p>
           <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
@@ -50,6 +62,23 @@
           </div>
         </div>
       </div>
+
+      {{if .Stats.EventFundingProgress}}
+      <h3 class="mt-6 text-lg font-semibold">Event Funding Progress</h3>
+      <div class="mt-4 space-y-4">
+        {{range .Stats.EventFundingProgress}}
+        <div class="rounded-xl border border-white/5 bg-slate-950/40 p-4">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-slate-200">{{.Title}}</span>
+            <span class="text-sm text-slate-400">₦{{printf "%.2f" .TotalCollected}} / ₦{{printf "%.2f" .GoalAmount}} ({{printf "%.0f" .Percentage}}%)</span>
+          </div>
+          <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+            <div class="h-full bg-cyan-400" style="width: {{printf "%.0f" .Percentage}}%"></div>
+          </div>
+        </div>
+        {{end}}
+      </div>
+      {{end}}
     </section>
 
     <section class="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -68,6 +97,7 @@
               <button type="button" data-toggle-form="attendance-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Attendance & dues</button>
               <button type="button" data-toggle-form="event-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Add event</button>
               <button type="button" data-toggle-form="fine-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Custom fine</button>
+              <button type="button" data-toggle-form="export-attendance-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Export Attendance</button>
             </div>
           </div>
 
@@ -149,6 +179,25 @@
                 <input name="reason" placeholder="Reason (e.g. insubordination, disrespect)" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
                 <input name="fine_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
                 <button type="submit" class="w-full rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-400">Issue fine</button>
+              </form>
+            </div>
+          </div>
+
+          <div id="export-attendance-form" class="mt-4 hidden sm:block">
+            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+              <h3 class="font-medium">Export Attendance</h3>
+              <form action="/export-attendance" method="get" class="mt-3 space-y-3">
+                <div class="flex gap-2">
+                  <div class="w-full">
+                    <label class="block text-xs text-slate-400 mb-1">Start Date</label>
+                    <input name="start_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                  </div>
+                  <div class="w-full">
+                    <label class="block text-xs text-slate-400 mb-1">End Date</label>
+                    <input name="end_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                  </div>
+                </div>
+                <button type="submit" class="w-full rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400">Download PDF</button>
               </form>
             </div>
           </div>

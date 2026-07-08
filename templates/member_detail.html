@@ -2,13 +2,21 @@
 <div id="member-content">
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
     <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
-    <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
-      <h1 class="text-3xl font-semibold">{{.View.Member.Name}}</h1>
-      <p class="mt-2 text-slate-300">{{.View.Member.Email}} · {{.View.Member.Phone}}</p>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">{{.View.Member.Status}}</span>
-        <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">Attendance: {{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span>
+    <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-semibold">{{.View.Member.Name}}</h1>
+        <p class="mt-2 text-slate-300">{{.View.Member.Email}} · {{.View.Member.Phone}}</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">{{.View.Member.Status}}</span>
+          <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">Attendance: {{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span>
+        </div>
       </div>
+      {{if ne .View.Member.Status "ex-member"}}
+      <form hx-post="/delete-member" onsubmit="return confirm('ARE YOU SURE YOU WANT TO DELETE THIS ACCOUNT?');" class="shrink-0">
+        <input type="hidden" name="member_id" value="{{.View.Member.ID}}">
+        <button type="submit" class="rounded-xl border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/30">Delete Member Account</button>
+      </form>
+      {{end}}
     </div>
 
     <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -35,7 +43,7 @@
           {{range .View.Dues}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
-              <span>{{.DueDate}} · {{.Status}} · ₦{{printf "%.2f" .Amount}}</span>
+              <span>{{.DueDate}} · {{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}} · ₦{{printf "%.2f" .Amount}}</span>
               {{if or (eq .Status "pending") (eq .Status "owed") (eq .Status "partially_paid")}}
               <form hx-post="/mark-dues-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
@@ -93,7 +101,7 @@
           {{range .View.Contributions}}
           <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
             <div class="flex items-center justify-between">
-              <span>{{$.Store.EventTitle .EventID}} · ₦{{printf "%.2f" .Amount}} · {{.Status}}</span>
+              <span>{{$.Store.EventTitle .EventID}} · ₦{{printf "%.2f" .Amount}} · {{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}}</span>
               {{if eq .Status "pending"}}
               <form hx-post="/mark-contribution-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />

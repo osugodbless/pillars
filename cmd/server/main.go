@@ -57,6 +57,15 @@ func main() {
 	mux.HandleFunc("/mark-contribution-paid", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleMarkContributionPaid(w, r, store)
 	})
+	mux.HandleFunc("/export-attendance", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleExportAttendancePDF(w, r, store)
+	})
+	mux.HandleFunc("/export-contributions", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleExportContributionsPDF(w, r, store)
+	})
+	mux.HandleFunc("/delete-member", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleDeleteMember(w, r, store)
+	})
 	mux.HandleFunc("/health", app.HandleHealth)
 
 	log.Println("listening on :8080")
