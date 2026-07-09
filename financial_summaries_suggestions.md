@@ -14,9 +14,6 @@ These are at-a-glance metrics that give the admin an immediate understanding of 
 - **At-Risk Members Count:** Number of members whose outstanding balances exceed a certain threshold (e.g., owing more than 3 months of dues or having high unapproved absence fines).
 
 ---
-EXPORT ATTENDANCE FOR A SELECTED PERIOD
-EXPORTCONTRIBUTIONS DATA
-A button in the event dashboard called something like settled, that should mark an event as settled when all members have contributed and admin has given the money to the person being contributed for. The settled button when clicked should first bring a popup that says are you sure? with option yes and no, clicking yes is a go-ahead confirmation. Also I want a cascade of reaction when the settled button is clicked and confirmed, I want the total amount collected to be deducted from the total treasury balance but not directly as that wuld affect the current logic. in the members dashboard, I want all members who have paid for that particular event for the statuses to change to settled when the setted button is click and confirmed in the event dashboard.
 
 ## 2. Recommended PDF Statements
 
