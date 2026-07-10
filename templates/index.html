@@ -358,6 +358,8 @@
         var targetId = formBtn.getAttribute('data-toggle-form');
         var target = document.getElementById(targetId);
         if (target) target.classList.toggle('hidden');
+        var menu = document.getElementById('quick-actions-menu');
+        if (menu && !menu.classList.contains('hidden')) menu.classList.add('hidden');
         return;
       }
     });
