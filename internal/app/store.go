@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -234,6 +235,239 @@ func (s *Store) MemberDashboardSummary(memberID int, days int) MemberDashboardSu
 		}
 	}
 	return summary
+}
+
+func AgingBucket(oldestDebtDate string) string {
+	if oldestDebtDate == "" {
+		return "0-30"
+	}
+	parsed, err := time.Parse("2006-01-02", oldestDebtDate)
+	if err != nil {
+		return "0-30"
+	}
+	days := int(time.Since(parsed).Hours() / 24)
+	if days <= 30 {
+		return "0-30"
+	} else if days <= 60 {
+		return "31-60"
+	} else if days <= 90 {
+		return "61-90"
+	}
+	return "90+"
+}
+
+func FormatNaira(amount float64) string {
+	negative := amount < 0
+	if negative {
+		amount = -amount
+	}
+	rounded := math.Round(amount*100) / 100
+	intPart := int64(rounded)
+	fracPart := int64(math.Round((rounded - float64(intPart)) * 100))
+
+	s := fmt.Sprintf("%d", intPart)
+	n := len(s)
+	if n > 3 {
+		var result []byte
+		for i, c := range s {
+			if i > 0 && (n-i)%3 == 0 {
+				result = append(result, ',')
+			}
+			result = append(result, byte(c))
+		}
+		s = string(result)
+	}
+	formatted := fmt.Sprintf("₦%s.%02d", s, fracPart)
+	if negative {
+		formatted = "-" + formatted
+	}
+	return formatted
+}
+
+func (s *Store) MemberFinancialSummaries(from, to string) ([]MemberFinancialSummary, error) {
+	type memberKey struct {
+		id   int
+		name string
+	}
+	memberMap := make(map[int]*MemberFinancialSummary)
+	for _, m := range s.Members {
+		if m.Status == "ex-member" {
+			continue
+		}
+		memberMap[m.ID] = &MemberFinancialSummary{
+			MemberID:   m.ID,
+			MemberName: m.Name,
+			Status:     m.Status,
+		}
+	}
+
+	for _, due := range s.Dues {
+		if due.DueDate < from || due.DueDate > to {
+			continue
+		}
+		summary, ok := memberMap[due.MemberID]
+		if !ok {
+			summary = &MemberFinancialSummary{
+				MemberID:   due.MemberID,
+				MemberName: fmt.Sprintf("Member #%d", due.MemberID),
+				Status:     "ex-member",
+			}
+			memberMap[due.MemberID] = summary
+		}
+		summary.DuesExpected += due.Amount + due.Deducted
+		if due.Status == "paid" || due.Status == "partially_paid" {
+			summary.DuesPaid += due.Amount
+			summary.DuesDeducted += due.Deducted
+		}
+	}
+
+	for _, fine := range s.Fines {
+		if fine.FineDate < from || fine.FineDate > to {
+			continue
+		}
+		summary, ok := memberMap[fine.MemberID]
+		if !ok {
+			summary = &MemberFinancialSummary{
+				MemberID:   fine.MemberID,
+				MemberName: fmt.Sprintf("Member #%d", fine.MemberID),
+				Status:     "ex-member",
+			}
+			memberMap[fine.MemberID] = summary
+		}
+		summary.FinesLevied += fine.Amount
+		if fine.Status == "paid" {
+			summary.FinesPaid += fine.Amount
+		}
+	}
+
+	eventDateMap := make(map[int]string)
+	for _, ev := range s.Events {
+		eventDateMap[ev.ID] = ev.Date
+	}
+	for _, contrib := range s.Contributions {
+		eventDate, ok := eventDateMap[contrib.EventID]
+		if !ok || eventDate < from || eventDate > to {
+			continue
+		}
+		summary, ok2 := memberMap[contrib.MemberID]
+		if !ok2 {
+			summary = &MemberFinancialSummary{
+				MemberID:   contrib.MemberID,
+				MemberName: fmt.Sprintf("Member #%d", contrib.MemberID),
+				Status:     "ex-member",
+			}
+			memberMap[contrib.MemberID] = summary
+		}
+		summary.ContributionsExpected += contrib.Amount
+		if contrib.Status == "paid" || contrib.Status == "partially_paid" || contrib.Status == "settled" {
+			summary.ContributionsPaid += contrib.Amount
+		}
+	}
+
+	var result []memberKey
+	for id := range memberMap {
+		result = append(result, memberKey{id: id, name: memberMap[id].MemberName})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].name < result[j].name
+	})
+	summaries := make([]MemberFinancialSummary, 0, len(result))
+	for _, key := range result {
+		summary := memberMap[key.id]
+		summary.NetBalance = (summary.DuesPaid + summary.FinesPaid + summary.ContributionsPaid) -
+			(summary.DuesExpected + summary.FinesLevied + summary.ContributionsExpected)
+		summaries = append(summaries, *summary)
+	}
+	return summaries, nil
+}
+
+func (s *Store) ArrearsByMember() ([]ArrearsRow, error) {
+	type memberKey struct {
+		id   int
+		name string
+	}
+	memberMap := make(map[int]*ArrearsRow)
+	for _, m := range s.Members {
+		if m.Status == "ex-member" {
+			continue
+		}
+		memberMap[m.ID] = &ArrearsRow{
+			MemberID:   m.ID,
+			MemberName: m.Name,
+			Status:     m.Status,
+		}
+	}
+
+	eventDateMap := make(map[int]string)
+	for _, ev := range s.Events {
+		eventDateMap[ev.ID] = ev.Date
+	}
+
+	for _, due := range s.Dues {
+		if due.Status != "pending" && due.Status != "owed" {
+			continue
+		}
+		summary, ok := memberMap[due.MemberID]
+		if !ok {
+			continue
+		}
+		summary.DuesOwed += due.Amount
+		if summary.OldestDebt == "" || due.DueDate < summary.OldestDebt {
+			summary.OldestDebt = due.DueDate
+		}
+	}
+
+	for _, fine := range s.Fines {
+		if fine.Status != "outstanding" {
+			continue
+		}
+		summary, ok := memberMap[fine.MemberID]
+		if !ok {
+			continue
+		}
+		summary.FinesOwed += fine.Amount
+		if summary.OldestDebt == "" || fine.FineDate < summary.OldestDebt {
+			summary.OldestDebt = fine.FineDate
+		}
+	}
+
+	for _, contrib := range s.Contributions {
+		if contrib.Status != "pending" && contrib.Status != "not_paid" {
+			continue
+		}
+		summary, ok := memberMap[contrib.MemberID]
+		if !ok {
+			continue
+		}
+		summary.ContribOwed += contrib.Amount
+		eventDate := eventDateMap[contrib.EventID]
+		if summary.OldestDebt == "" || eventDate < summary.OldestDebt {
+			summary.OldestDebt = eventDate
+		}
+	}
+
+	var result []memberKey
+	for id := range memberMap {
+		result = append(result, memberKey{id: id, name: memberMap[id].MemberName})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].name < result[j].name
+	})
+
+	var rows []ArrearsRow
+	for _, key := range result {
+		row := memberMap[key.id]
+		row.TotalOwed = row.DuesOwed + row.FinesOwed + row.ContribOwed
+		if row.TotalOwed <= 0 {
+			continue
+		}
+		row.Bucket = AgingBucket(row.OldestDebt)
+		rows = append(rows, *row)
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].TotalOwed > rows[j].TotalOwed
+	})
+	return rows, nil
 }
 
 func (s *Store) RecordAttendance(memberID int, meetingDate, status, note string) error {
@@ -1221,6 +1455,32 @@ type AttendanceGroup struct {
 	MeetingDate string
 	Count       int
 	Status      string
+}
+
+type MemberFinancialSummary struct {
+	MemberID              int
+	MemberName            string
+	Status                string
+	DuesExpected          float64
+	DuesPaid              float64
+	DuesDeducted          float64
+	FinesLevied           float64
+	FinesPaid             float64
+	ContributionsExpected float64
+	ContributionsPaid     float64
+	NetBalance            float64
+}
+
+type ArrearsRow struct {
+	MemberID    int
+	MemberName  string
+	Status      string
+	DuesOwed    float64
+	FinesOwed   float64
+	ContribOwed float64
+	TotalOwed   float64
+	OldestDebt  string
+	Bucket      string
 }
 
 func groupAttendanceByDate(records []AttendanceRecord) []AttendanceGroup {

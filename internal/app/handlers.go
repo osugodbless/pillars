@@ -1061,25 +1061,28 @@ func HandleExportAttendancePDF(w http.ResponseWriter, r *http.Request, store *St
 	endDate := r.URL.Query().Get("end_date")
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddUTF8FontFromBytes("notosans", "", notoSansFont)
+	pdf.AddUTF8FontFromBytes("notosans", "B", notoSansFont)
+	pdf.AddUTF8FontFromBytes("notosans", "I", notoSansFont)
 	pdf.AddPage()
-	pdf.SetFont("Arial", "B", 16)
+	pdf.SetFont("notosans", "B", 16)
 	pdf.Cell(40, 10, "Attendance Report")
 	pdf.Ln(12)
 
 	if startDate != "" && endDate != "" {
-		pdf.SetFont("Arial", "", 12)
+		pdf.SetFont("notosans", "", 12)
 		pdf.Cell(40, 10, fmt.Sprintf("Period: %s to %s", startDate, endDate))
 		pdf.Ln(10)
 	}
 
-	pdf.SetFont("Arial", "B", 12)
+	pdf.SetFont("notosans", "B", 12)
 	pdf.CellFormat(60, 10, "Member Name", "1", 0, "", false, 0, "")
 	pdf.CellFormat(30, 10, "Date", "1", 0, "", false, 0, "")
 	pdf.CellFormat(65, 10, "Status", "1", 0, "", false, 0, "")
 	pdf.CellFormat(35, 10, "Active?", "1", 0, "", false, 0, "")
 	pdf.Ln(-1)
 
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("notosans", "", 12)
 	for _, record := range store.Attendance {
 		if startDate != "" && record.MeetingDate < startDate {
 			continue
@@ -1158,18 +1161,20 @@ func HandleExportContributionsPDF(w http.ResponseWriter, r *http.Request, store 
 	}
 
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddUTF8FontFromBytes("notosans", "", notoSansFont)
+	pdf.AddUTF8FontFromBytes("notosans", "B", notoSansFont)
 	pdf.AddPage()
-	pdf.SetFont("Arial", "B", 16)
+	pdf.SetFont("notosans", "B", 16)
 	pdf.Cell(40, 10, fmt.Sprintf("Contributions Report: %s", targetEvent.Title))
 	pdf.Ln(12)
 
-	pdf.SetFont("Arial", "B", 12)
+	pdf.SetFont("notosans", "B", 12)
 	pdf.CellFormat(60, 10, "Member Name", "1", 0, "", false, 0, "")
 	pdf.CellFormat(40, 10, "Status", "1", 0, "", false, 0, "")
 	pdf.CellFormat(40, 10, "Amount", "1", 0, "", false, 0, "")
 	pdf.Ln(-1)
 
-	pdf.SetFont("Arial", "", 12)
+	pdf.SetFont("notosans", "", 12)
 	for _, member := range store.Members {
 		status := "not_paid"
 		amount := 0.0
@@ -1197,4 +1202,232 @@ func HandleExportContributionsPDF(w http.ResponseWriter, r *http.Request, store 
 	if err := pdf.Output(w); err != nil {
 		http.Error(w, "failed to generate PDF", http.StatusInternalServerError)
 	}
+}
+
+func HandleCommitteeReport(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	from := r.URL.Query().Get("from")
+	to := r.URL.Query().Get("to")
+
+	if from == "" && to == "" {
+		now := time.Now()
+		firstOfMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		from = firstOfMonth.Format("2006-01-02")
+		to = now.Format("2006-01-02")
+	} else if from == "" || to == "" {
+		http.Error(w, "Valid from and to dates required (YYYY-MM-DD)", http.StatusBadRequest)
+		return
+	}
+
+	if from > to {
+		http.Error(w, "from date must be before to date", http.StatusBadRequest)
+		return
+	}
+
+	summaries, err := store.MemberFinancialSummaries(from, to)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	config := ReportConfig{
+		Title:       "Committee Consolidated Financial Report",
+		Subtitle:    fmt.Sprintf("Period: %s to %s", from, to),
+		CoopName:    "Pillars Cooperative",
+		Orientation: "L",
+	}
+	builder := NewReportBuilder(config)
+
+	cols := []TableColumn{
+		{Header: "Member Name", Width: 35, Align: "L"},
+		{Header: "Status", Width: 18, Align: "C"},
+		{Header: "Dues Exp.", Width: 22, Align: "R"},
+		{Header: "Dues Pd.", Width: 22, Align: "R"},
+		{Header: "Dues Ded.", Width: 22, Align: "R"},
+		{Header: "Fines Lev.", Width: 22, Align: "R"},
+		{Header: "Fines Pd.", Width: 22, Align: "R"},
+		{Header: "Contrib. Exp.", Width: 22, Align: "R"},
+		{Header: "Contrib. Pd.", Width: 22, Align: "R"},
+		{Header: "Net Balance", Width: 22, Align: "R"},
+	}
+
+	var rows [][]string
+	totalDuesExp := 0.0
+	totalDuesPaid := 0.0
+	totalFinesLev := 0.0
+	totalFinesPaid := 0.0
+	totalContribExp := 0.0
+	totalContribPaid := 0.0
+
+	for _, s := range summaries {
+		rows = append(rows, []string{
+			s.MemberName,
+			s.Status,
+			FormatNaira(s.DuesExpected),
+			FormatNaira(s.DuesPaid),
+			FormatNaira(s.DuesDeducted),
+			FormatNaira(s.FinesLevied),
+			FormatNaira(s.FinesPaid),
+			FormatNaira(s.ContributionsExpected),
+			FormatNaira(s.ContributionsPaid),
+			FormatNaira(s.NetBalance),
+		})
+		totalDuesExp += s.DuesExpected
+		totalDuesPaid += s.DuesPaid
+		totalFinesLev += s.FinesLevied
+		totalFinesPaid += s.FinesPaid
+		totalContribExp += s.ContributionsExpected
+		totalContribPaid += s.ContributionsPaid
+	}
+
+	section := ReportSection{
+		Title:   "Member Financial Summary",
+		Columns: cols,
+		Rows:    rows,
+	}
+	builder.AddSection(section)
+
+	summaryRows := []SummaryRow{
+		{Label: "Total Dues Expected", Value: FormatNaira(totalDuesExp), Bold: true},
+		{Label: "Total Dues Collected", Value: FormatNaira(totalDuesPaid), Bold: true},
+		{Label: "Total Fines Levied", Value: FormatNaira(totalFinesLev), Bold: true},
+		{Label: "Total Fines Paid", Value: FormatNaira(totalFinesPaid), Bold: true},
+		{Label: "Total Contributions Expected", Value: FormatNaira(totalContribExp), Bold: true},
+		{Label: "Total Contributions Collected", Value: FormatNaira(totalContribPaid), Bold: true},
+	}
+
+	treasury := []SummaryRow{
+		{Label: "Treasury Balance", Value: FormatNaira(store.TotalTreasuryBalance()), Bold: true},
+		{Label: "Outstanding Receivables", Value: FormatNaira(store.TotalOutstandingReceivables()), Bold: true},
+		{Label: "At-Risk Members", Value: fmt.Sprintf("%d", store.AtRiskMembersCount()), Bold: true},
+	}
+
+	builder.AddSummary(summaryRows)
+	builder.AddSummary(treasury)
+
+	pdfBytes, err := builder.Render()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="committee_report_%s_to_%s.pdf"`, from, to))
+	w.Write(pdfBytes)
+}
+
+func HandleArrearsReport(w http.ResponseWriter, r *http.Request, store *Store) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	arrears, err := store.ArrearsByMember()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	now := time.Now().Format("2006-01-02")
+	config := ReportConfig{
+		Title:       "Arrears & Debt Aging Report",
+		Subtitle:    fmt.Sprintf("As of %s", now),
+		CoopName:    "Pillars Cooperative",
+		Orientation: "P",
+	}
+	builder := NewReportBuilder(config)
+
+	totalOutstanding := 0.0
+	totalDuesOwed := 0.0
+	totalFinesOwed := 0.0
+	totalContribOwed := 0.0
+	age30 := 0.0
+	age30count := 0
+	age60 := 0.0
+	age60count := 0
+	age90 := 0.0
+	age90count := 0
+
+	for _, row := range arrears {
+		totalOutstanding += row.TotalOwed
+		totalDuesOwed += row.DuesOwed
+		totalFinesOwed += row.FinesOwed
+		totalContribOwed += row.ContribOwed
+		switch row.Bucket {
+		case "0-30":
+			age30 += row.TotalOwed
+			age30count++
+		case "31-60":
+			age60 += row.TotalOwed
+			age60count++
+		case "61-90":
+			age90 += row.TotalOwed
+			age90count++
+		case "90+":
+			age90 += row.TotalOwed
+			age90count++
+		}
+	}
+
+	summaryRows := []SummaryRow{
+		{Label: "Total Outstanding", Value: FormatNaira(totalOutstanding), Bold: true},
+		{Label: "Members with Debt", Value: fmt.Sprintf("%d", len(arrears)), Bold: true},
+		{Label: "0-30 Days", Value: fmt.Sprintf("%s (%d members)", FormatNaira(age30), age30count), Bold: false},
+		{Label: "31-60 Days", Value: fmt.Sprintf("%s (%d members)", FormatNaira(age60), age60count), Bold: false},
+		{Label: "61-90 Days", Value: fmt.Sprintf("%s (%d members)", FormatNaira(age90), age90count), Bold: false},
+		{Label: "Total Dues Owed", Value: FormatNaira(totalDuesOwed), Bold: false},
+		{Label: "Total Fines Outstanding", Value: FormatNaira(totalFinesOwed), Bold: false},
+		{Label: "Total Contributions Pending", Value: FormatNaira(totalContribOwed), Bold: false},
+	}
+	builder.AddSummary(summaryRows)
+
+	cols := []TableColumn{
+		{Header: "Member Name", Width: 40, Align: "L"},
+		{Header: "Status", Width: 20, Align: "C"},
+		{Header: "Dues Owed", Width: 25, Align: "R"},
+		{Header: "Fines Out.", Width: 25, Align: "R"},
+		{Header: "Contrib. Pend.", Width: 25, Align: "R"},
+		{Header: "Total Owed", Width: 25, Align: "R"},
+		{Header: "Oldest Debt", Width: 25, Align: "C"},
+		{Header: "Aging", Width: 15, Align: "C"},
+	}
+
+	var rows [][]string
+	for _, row := range arrears {
+		oldest := row.OldestDebt
+		if oldest == "" {
+			oldest = "N/A"
+		}
+		rows = append(rows, []string{
+			row.MemberName,
+			row.Status,
+			FormatNaira(row.DuesOwed),
+			FormatNaira(row.FinesOwed),
+			FormatNaira(row.ContribOwed),
+			FormatNaira(row.TotalOwed),
+			oldest,
+			row.Bucket,
+		})
+	}
+
+	section := ReportSection{
+		Title:   "Member Arrears Detail",
+		Columns: cols,
+		Rows:    rows,
+	}
+	builder.AddSection(section)
+
+	pdfBytes, err := builder.Render()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="arrears_report_%s.pdf"`, now))
+	w.Write(pdfBytes)
 }

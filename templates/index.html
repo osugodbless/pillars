@@ -130,6 +130,37 @@
       {{end}}
     </section>
 
+    <section class="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
+      <h2 class="text-xl font-semibold">Reports</h2>
+      <p class="mt-1 text-sm text-slate-400">Generate financial reports for committee review.</p>
+      <div class="mt-4 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+          <h3 class="font-medium text-slate-200">Committee Consolidated Financial Report</h3>
+          <p class="mt-1 text-xs text-slate-400">View all members' financial activity for a specific date range.</p>
+          <form action="/reports/committee" method="get" class="mt-3 space-y-3">
+            <div class="flex gap-2">
+              <div class="w-full">
+                <label class="block text-xs text-slate-400 mb-1">From</label>
+                <input name="from" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+              </div>
+              <div class="w-full">
+                <label class="block text-xs text-slate-400 mb-1">To</label>
+                <input name="to" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+              </div>
+            </div>
+            <button type="submit" class="w-full rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400">Download PDF</button>
+          </form>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+          <h3 class="font-medium text-slate-200">Arrears & Debt Aging Report</h3>
+          <p class="mt-1 text-xs text-slate-400">View all outstanding debts sorted by amount owed.</p>
+          <form action="/reports/arrears" method="get" class="mt-3">
+            <button type="submit" class="w-full rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-400">Download PDF</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <section class="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
       <div class="space-y-6">
         <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">

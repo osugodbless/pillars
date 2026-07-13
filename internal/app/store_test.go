@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestMemberBalanceUsesDuesPaidMinusFinesOwed(t *testing.T) {
@@ -313,5 +314,175 @@ func TestAddContributionAllowsSmallSubsequentPaymentAfterMinimumMet(t *testing.T
 			}
 			break
 		}
+	}
+}
+
+func TestFormatNaira(t *testing.T) {
+	tests := []struct {
+		input    float64
+		expected string
+	}{
+		{0, "₦0.00"},
+		{100, "₦100.00"},
+		{1000, "₦1,000.00"},
+		{1234567, "₦1,234,567.00"},
+		{1234.56, "₦1,234.56"},
+		{-500, "-₦500.00"},
+		{0.1, "₦0.10"},
+		{99.99, "₦99.99"},
+	}
+
+	for _, tt := range tests {
+		result := FormatNaira(tt.input)
+		if result != tt.expected {
+			t.Errorf("FormatNaira(%v) = %q, want %q", tt.input, result, tt.expected)
+		}
+	}
+}
+
+func TestAgingBucket(t *testing.T) {
+	today := time.Now()
+
+	tests := []struct {
+		date     string
+		expected string
+	}{
+		{"", "0-30"},
+		{today.Format("2006-01-02"), "0-30"},
+		{today.AddDate(0, 0, -15).Format("2006-01-02"), "0-30"},
+		{today.AddDate(0, 0, -31).Format("2006-01-02"), "31-60"},
+		{today.AddDate(0, 0, -45).Format("2006-01-02"), "31-60"},
+		{today.AddDate(0, 0, -61).Format("2006-01-02"), "61-90"},
+		{today.AddDate(0, 0, -75).Format("2006-01-02"), "61-90"},
+		{today.AddDate(0, 0, -91).Format("2006-01-02"), "90+"},
+		{today.AddDate(0, 0, -120).Format("2006-01-02"), "90+"},
+		{"invalid-date", "0-30"},
+	}
+
+	for _, tt := range tests {
+		result := AgingBucket(tt.date)
+		if result != tt.expected {
+			t.Errorf("AgingBucket(%q) = %q, want %q", tt.date, result, tt.expected)
+		}
+	}
+}
+
+func TestMemberFinancialSummaries(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{
+		{ID: 1, Name: "Ada", Status: "active"},
+		{ID: 2, Name: "Bob", Status: "active"},
+		{ID: 3, Name: "Carol", Status: "ex-member"},
+	}
+	store.Dues = []DuesRecord{
+		{MemberID: 1, Amount: 2000, Status: "paid", DueDate: "2026-01-15"},
+		{MemberID: 1, Amount: 2000, Status: "pending", DueDate: "2026-02-15"},
+		{MemberID: 2, Amount: 2000, Status: "paid", DueDate: "2026-01-15"},
+		{MemberID: 3, Amount: 2000, Status: "paid", DueDate: "2026-01-15"},
+	}
+	store.Fines = []Fine{
+		{MemberID: 1, Amount: 500, Status: "outstanding", FineDate: "2026-01-20"},
+		{MemberID: 2, Amount: 300, Status: "paid", FineDate: "2026-01-25"},
+	}
+	store.Events = []Event{{ID: 1, Date: "2026-01-10"}}
+	store.Contributions = []Contribution{
+		{EventID: 1, MemberID: 1, Amount: 1000, Status: "paid"},
+		{EventID: 1, MemberID: 2, Amount: 1000, Status: "pending"},
+	}
+
+	summaries, err := store.MemberFinancialSummaries("2026-01-01", "2026-01-31")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(summaries) != 3 {
+		t.Fatalf("expected 3 summaries (active + ex-member with records in range), got %d", len(summaries))
+	}
+
+	ada := summaries[0]
+	if ada.MemberName != "Ada" {
+		t.Errorf("expected Ada, got %s", ada.MemberName)
+	}
+	if ada.DuesExpected != 2000 {
+		t.Errorf("expected DuesExpected 2000, got %.2f", ada.DuesExpected)
+	}
+	if ada.DuesPaid != 2000 {
+		t.Errorf("expected DuesPaid 2000, got %.2f", ada.DuesPaid)
+	}
+	if ada.FinesLevied != 500 {
+		t.Errorf("expected FinesLevied 500, got %.2f", ada.FinesLevied)
+	}
+	if ada.FinesPaid != 0 {
+		t.Errorf("expected FinesPaid 0, got %.2f", ada.FinesPaid)
+	}
+	if ada.ContributionsExpected != 1000 {
+		t.Errorf("expected ContributionsExpected 1000, got %.2f", ada.ContributionsExpected)
+	}
+	if ada.ContributionsPaid != 1000 {
+		t.Errorf("expected ContributionsPaid 1000, got %.2f", ada.ContributionsPaid)
+	}
+
+	bob := summaries[1]
+	if bob.DuesExpected != 2000 {
+		t.Errorf("expected Bob DuesExpected 2000, got %.2f", bob.DuesExpected)
+	}
+	if bob.FinesPaid != 300 {
+		t.Errorf("expected Bob FinesPaid 300, got %.2f", bob.FinesPaid)
+	}
+	if bob.ContributionsPaid != 0 {
+		t.Errorf("expected Bob ContributionsPaid 0, got %.2f", bob.ContributionsPaid)
+	}
+}
+
+func TestArrearsByMember(t *testing.T) {
+	store := NewStore()
+	store.Members = []Member{
+		{ID: 1, Name: "Ada", Status: "active"},
+		{ID: 2, Name: "Bob", Status: "active"},
+		{ID: 3, Name: "Carol", Status: "active"},
+	}
+	store.Dues = []DuesRecord{
+		{MemberID: 1, Amount: 2000, Status: "pending", DueDate: "2026-01-15"},
+		{MemberID: 1, Amount: 2000, Status: "paid", DueDate: "2026-02-15"},
+		{MemberID: 2, Amount: 4000, Status: "owed", DueDate: "2025-12-01"},
+	}
+	store.Fines = []Fine{
+		{MemberID: 1, Amount: 500, Status: "outstanding", FineDate: "2026-01-20"},
+		{MemberID: 3, Amount: 1000, Status: "outstanding", FineDate: ""},
+	}
+
+	arrears, err := store.ArrearsByMember()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(arrears) != 3 {
+		t.Fatalf("expected 3 members with debt, got %d", len(arrears))
+	}
+
+	if arrears[0].TotalOwed < arrears[1].TotalOwed {
+		t.Error("arrears should be sorted by total owed descending")
+	}
+
+	bob := arrears[0]
+	if bob.MemberName != "Bob" {
+		t.Errorf("expected Bob, got %s", bob.MemberName)
+	}
+	if bob.DuesOwed != 4000 {
+		t.Errorf("expected Bob DuesOwed 4000, got %.2f", bob.DuesOwed)
+	}
+	if bob.TotalOwed != 4000 {
+		t.Errorf("expected Bob TotalOwed 4000, got %.2f", bob.TotalOwed)
+	}
+
+	ada := arrears[1]
+	if ada.DuesOwed != 2000 {
+		t.Errorf("expected Ada DuesOwed 2000, got %.2f", ada.DuesOwed)
+	}
+	if ada.FinesOwed != 500 {
+		t.Errorf("expected Ada FinesOwed 500, got %.2f", ada.FinesOwed)
+	}
+	if ada.TotalOwed != 2500 {
+		t.Errorf("expected Ada TotalOwed 2500, got %.2f", ada.TotalOwed)
 	}
 }

@@ -78,6 +78,12 @@ func main() {
 	mux.HandleFunc("/delete-member", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleDeleteMember(w, r, store)
 	})
+	mux.HandleFunc("/reports/committee", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleCommitteeReport(w, r, store)
+	})
+	mux.HandleFunc("/reports/arrears", func(w http.ResponseWriter, r *http.Request) {
+		app.HandleArrearsReport(w, r, store)
+	})
 	mux.HandleFunc("/health", app.HandleHealth)
 
 	log.Println("listening on :8080")
