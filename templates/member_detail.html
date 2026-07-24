@@ -1,85 +1,87 @@
 {{define "content"}}
 <div id="member-content">
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    <a href="/" class="text-sm text-cyan-300 hover:text-cyan-200">← Back to dashboard</a>
-    <div class="mt-4 rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-semibold">{{.View.Member.Name}}</h1>
-        <p class="mt-2 text-slate-300">{{.View.Member.Email}} · {{.View.Member.Phone}}</p>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <span class="rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-200">{{.View.Member.Status}}</span>
-          <span class="rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-200">Attendance: {{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span>
-          {{if .View.Member.ProbationEnds}}
-          <span class="rounded-full bg-amber-500/20 px-3 py-1 text-sm text-amber-200">Probation ends: {{.View.Member.ProbationEnds}}</span>
+    <a href="/" class="text-sm font-medium text-brand-green-dark hover:text-brand-green-mid">&larr; Back to dashboard</a>
+    <div class="mt-4 rounded-2xl border border-hairline bg-white p-8 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl font-medium text-ink" style="letter-spacing: -0.5px;">{{.View.Member.Name}}</h1>
+          <p class="mt-2 text-slate">{{.View.Member.Email}} · {{.View.Member.Phone}}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <span class="rounded-full bg-surface-feature px-3 py-1 text-sm font-medium text-brand-green-dark">{{.View.Member.Status}}</span>
+            <span class="rounded-full bg-brand-green-soft px-3 py-1 text-sm font-medium text-brand-green-dark">Attendance: {{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span>
+            {{if .View.Member.ProbationEnds}}
+            <span class="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">Probation ends: {{.View.Member.ProbationEnds}}</span>
+            {{end}}
+          </div>
+        </div>
+        <div class="flex shrink-0 flex-wrap gap-2">
+          {{if eq .View.Member.Status "probation"}}
+          <button onclick="document.getElementById('promote-modal').classList.remove('hidden')" class="rounded-full bg-brand-green px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Promote to Active</button>
+          <button onclick="document.getElementById('extend-modal').classList.remove('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">Extend Probation</button>
+          {{end}}
+          {{if ne .View.Member.Status "ex-member"}}
+          <button onclick="document.getElementById('delete-modal').classList.remove('hidden')" class="rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50">Delete Member Account</button>
           {{end}}
         </div>
-      </div>
-      <div class="flex shrink-0 flex-wrap gap-2">
-        {{if eq .View.Member.Status "probation"}}
-        <button onclick="document.getElementById('promote-modal').classList.remove('hidden')" class="rounded-xl border border-emerald-500/30 bg-emerald-500/20 px-4 py-2 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-500/30">Promote to Active</button>
-        <button onclick="document.getElementById('extend-modal').classList.remove('hidden')" class="rounded-xl border border-amber-500/30 bg-amber-500/20 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-500/30">Extend Probation</button>
-        {{end}}
-        {{if ne .View.Member.Status "ex-member"}}
-        <button onclick="document.getElementById('delete-modal').classList.remove('hidden')" class="rounded-xl border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-200 transition hover:bg-red-500/30">Delete Member Account</button>
-        {{end}}
       </div>
     </div>
 
-    <div class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-        <h2 class="text-lg font-semibold">Attendance</h2>
-        <p class="mt-2 text-sm text-slate-400">Present: {{.View.Summary.AttendancePresent}}</p>
-        <p class="text-sm text-slate-400">Absent without permission: {{.View.Summary.AttendanceAbsent}}</p>
-        <ul id="attendance-list" class="mt-3 space-y-2 text-sm text-slate-300">
+    <div class="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <h2 class="text-lg font-medium text-ink">Attendance</h2>
+        <p class="mt-2 text-sm text-steel">Present: {{.View.Summary.AttendancePresent}}</p>
+        <p class="text-sm text-steel">Absent without permission: {{.View.Summary.AttendanceAbsent}}</p>
+        <ul id="attendance-list" class="mt-3 space-y-2 text-sm text-charcoal">
           {{range .View.Attendance}}
-          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">{{.MeetingDate}} · {{.Status}}</li>
+          <li class="rounded-lg border border-hairline bg-surface p-3">{{.MeetingDate}} · {{.Status}}</li>
           {{end}}
         </ul>
-        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-          <button id="attendance-prev" onclick="pagePrev('attendance')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+        <div class="mt-2 flex items-center justify-between text-xs text-steel">
+          <button id="attendance-prev" onclick="pagePrev('attendance')" class="rounded px-2 py-1 transition-colors hover:bg-surface">&larr; Prev</button>
           <span id="attendance-page">1 of 1</span>
-          <button id="attendance-next" onclick="pageNext('attendance')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+          <button id="attendance-next" onclick="pageNext('attendance')" class="rounded px-2 py-1 transition-colors hover:bg-surface">Next &rarr;</button>
         </div>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-        <h2 class="text-lg font-semibold">Dues</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.DuesPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.DuesOwed}}</p>
-        <ul id="dues-list" class="mt-3 space-y-2 text-sm text-slate-300">
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <h2 class="text-lg font-medium text-ink">Dues</h2>
+        <p class="mt-2 text-sm text-steel">Paid: ₦{{printf "%.2f" .View.Summary.DuesPaid}}</p>
+        <p class="text-sm text-steel">Owed: ₦{{printf "%.2f" .View.Summary.DuesOwed}}</p>
+        <ul id="dues-list" class="mt-3 space-y-2 text-sm text-charcoal">
           {{range .View.Dues}}
-          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+          <li class="rounded-lg border border-hairline bg-surface p-3">
             <div class="flex items-center justify-between">
               <span>{{.DueDate}} · {{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}} · ₦{{printf "%.2f" .Amount}}</span>
               {{if or (eq .Status "pending") (eq .Status "owed") (eq .Status "partially_paid")}}
               <form hx-post="/mark-dues-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                 <input type="hidden" name="dues_id" value="{{.ID}}" />
-                <button type="submit" class="rounded-md bg-emerald-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-emerald-400">Mark paid</button>
+                <button type="submit" class="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Mark paid</button>
               </form>
               {{end}}
             </div>
           </li>
           {{end}}
         </ul>
-        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-          <button id="dues-prev" onclick="pagePrev('dues')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+        <div class="mt-2 flex items-center justify-between text-xs text-steel">
+          <button id="dues-prev" onclick="pagePrev('dues')" class="rounded px-2 py-1 transition-colors hover:bg-surface">&larr; Prev</button>
           <span id="dues-page">1 of 1</span>
-          <button id="dues-next" onclick="pageNext('dues')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+          <button id="dues-next" onclick="pageNext('dues')" class="rounded px-2 py-1 transition-colors hover:bg-surface">Next &rarr;</button>
         </div>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-        <h2 class="text-lg font-semibold">Fines</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.FinesPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.FinesOwed}}</p>
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <h2 class="text-lg font-medium text-ink">Fines</h2>
+        <p class="mt-2 text-sm text-steel">Paid: ₦{{printf "%.2f" .View.Summary.FinesPaid}}</p>
+        <p class="text-sm text-steel">Owed: ₦{{printf "%.2f" .View.Summary.FinesOwed}}</p>
         {{if gt .View.Summary.FinesOwed 0.0}}
         <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="mt-3">
           <input type="hidden" name="member_id" value="{{.View.Member.ID}}" />
-          <button type="submit" class="w-full rounded-lg bg-orange-500/80 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct all from dues</button>
+          <button type="submit" class="w-full rounded-full bg-brand-green px-3 py-1.5 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Deduct all from dues</button>
         </form>
         {{end}}
-        <ul id="fines-list" class="mt-3 space-y-2 text-sm text-slate-300">
+        <ul id="fines-list" class="mt-3 space-y-2 text-sm text-charcoal">
           {{range .View.Fines}}
-          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+          <li class="rounded-lg border border-hairline bg-surface p-3">
             <div class="flex items-center justify-between">
               <span>{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}} · ₦{{printf "%.2f" .Amount}} · {{.Status}}</span>
               {{if eq .Status "outstanding"}}
@@ -87,12 +89,12 @@
                 <form hx-post="/mark-fine-paid" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
                   <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                   <input type="hidden" name="fine_id" value="{{.ID}}" />
-                  <button type="submit" class="rounded-md bg-emerald-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-emerald-400">Pay</button>
+                  <button type="submit" class="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Pay</button>
                 </form>
                 <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
                   <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                   <input type="hidden" name="fine_id" value="{{.ID}}" />
-                  <button type="submit" class="rounded-md bg-orange-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct</button>
+                  <button type="submit" class="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Deduct</button>
                 </form>
               </div>
               {{end}}
@@ -100,76 +102,76 @@
           </li>
           {{end}}
         </ul>
-        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-          <button id="fines-prev" onclick="pagePrev('fines')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+        <div class="mt-2 flex items-center justify-between text-xs text-steel">
+          <button id="fines-prev" onclick="pagePrev('fines')" class="rounded px-2 py-1 transition-colors hover:bg-surface">&larr; Prev</button>
           <span id="fines-page">1 of 1</span>
-          <button id="fines-next" onclick="pageNext('fines')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+          <button id="fines-next" onclick="pageNext('fines')" class="rounded px-2 py-1 transition-colors hover:bg-surface">Next &rarr;</button>
         </div>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-        <h2 class="text-lg font-semibold">Contributions</h2>
-        <p class="mt-2 text-sm text-slate-400">Paid: ₦{{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
-        <p class="text-sm text-slate-400">Owed: ₦{{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
-        <ul id="contributions-list" class="mt-3 space-y-2 text-sm text-slate-300">
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <h2 class="text-lg font-medium text-ink">Contributions</h2>
+        <p class="mt-2 text-sm text-steel">Paid: ₦{{printf "%.2f" .View.Summary.ContributionsPaid}}</p>
+        <p class="text-sm text-steel">Owed: ₦{{printf "%.2f" .View.Summary.ContributionsOwed}}</p>
+        <ul id="contributions-list" class="mt-3 space-y-2 text-sm text-charcoal">
           {{range .View.Contributions}}
-          <li class="rounded-lg border border-slate-800 bg-slate-950/70 p-2">
+          <li class="rounded-lg border border-hairline bg-surface p-3">
             <div class="flex items-center justify-between">
-              <span>{{$.Store.EventTitle .EventID}} · ₦{{printf "%.2f" .Amount}} · <span class="{{if eq .Status "settled"}}text-purple-300{{else if eq .Status "paid"}}text-emerald-300{{else if eq .Status "partially_paid"}}text-blue-300{{else}}text-amber-300{{end}}">{{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}}</span></span>
+              <span>{{$.Store.EventTitle .EventID}} · ₦{{printf "%.2f" .Amount}} · <span class="{{if eq .Status "settled"}}text-accent-purple{{else if eq .Status "paid"}}text-emerald-600{{else if eq .Status "partially_paid"}}text-accent-blue{{else}}text-amber-600{{end}} font-medium">{{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}}</span></span>
               {{if eq .Status "pending"}}
               <form hx-post="/mark-contribution-paid" hx-target="#member-content" hx-swap="outerHTML" class="ml-2 shrink-0">
                 <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                 <input type="hidden" name="event_id" value="{{.EventID}}" />
-                <button type="submit" class="rounded-md bg-orange-500/70 px-2 py-1 text-xs font-semibold text-white transition hover:bg-orange-400">Deduct</button>
+                <button type="submit" class="rounded-full bg-brand-green px-3 py-1 text-xs font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Deduct</button>
               </form>
               {{end}}
             </div>
           </li>
           {{end}}
         </ul>
-        <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-          <button id="contributions-prev" onclick="pagePrev('contributions')" class="rounded px-2 py-1 hover:bg-slate-800">&larr; Prev</button>
+        <div class="mt-2 flex items-center justify-between text-xs text-steel">
+          <button id="contributions-prev" onclick="pagePrev('contributions')" class="rounded px-2 py-1 transition-colors hover:bg-surface">&larr; Prev</button>
           <span id="contributions-page">1 of 1</span>
-          <button id="contributions-next" onclick="pageNext('contributions')" class="rounded px-2 py-1 hover:bg-slate-800">Next &rarr;</button>
+          <button id="contributions-next" onclick="pageNext('contributions')" class="rounded px-2 py-1 transition-colors hover:bg-surface">Next &rarr;</button>
         </div>
       </div>
     </div>
   </div>
 
   {{if eq .View.Member.Status "probation"}}
-  <div id="promote-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
-    <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
-      <h3 class="text-lg font-semibold">Promote to Active</h3>
-      <p class="mt-2 text-sm text-slate-300">Promote <strong>{{.View.Member.Name}}</strong> to active member? They will be marked as a bonafide member.</p>
+  <div id="promote-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="rounded-xl border border-hairline bg-white p-6 shadow-2xl max-w-sm w-full mx-4">
+      <h3 class="text-lg font-medium text-ink">Promote to Active</h3>
+      <p class="mt-2 text-sm text-slate">Promote <strong class="text-charcoal">{{.View.Member.Name}}</strong> to active member? They will be marked as a bonafide member.</p>
       <div class="mt-5 flex justify-end gap-3">
-        <button onclick="document.getElementById('promote-modal').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">No</button>
-        <button hx-post="/promote-to-active" hx-vals='{"member_id":"{{.View.Member.ID}}"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('promote-modal').classList.add('hidden')" class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400">Yes</button>
+        <button onclick="document.getElementById('promote-modal').classList.add('hidden')" class="rounded-full border border-hairline-strong px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface">No</button>
+        <button hx-post="/promote-to-active" hx-vals='{"member_id":"{{.View.Member.ID}}"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('promote-modal').classList.add('hidden')" class="rounded-full bg-brand-green px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Yes</button>
       </div>
     </div>
   </div>
 
-  <div id="extend-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
-    <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
-      <h3 class="text-lg font-semibold">Extend Probation</h3>
-      <p class="mt-2 text-sm text-slate-300">Extend probation for <strong>{{.View.Member.Name}}</strong> by:</p>
+  <div id="extend-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="rounded-xl border border-hairline bg-white p-6 shadow-2xl max-w-sm w-full mx-4">
+      <h3 class="text-lg font-medium text-ink">Extend Probation</h3>
+      <p class="mt-2 text-sm text-slate">Extend probation for <strong class="text-charcoal">{{.View.Member.Name}}</strong> by:</p>
       <div class="mt-4 flex flex-col gap-2">
-        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"1"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">1 month</button>
-        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"2"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">2 months</button>
-        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"3"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">3 months</button>
+        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"1"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">1 month</button>
+        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"2"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">2 months</button>
+        <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.View.Member.ID}}","months":"3"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">3 months</button>
       </div>
       <div class="mt-4 flex justify-end">
-        <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</button>
+        <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="rounded-full border border-hairline-strong px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface">Cancel</button>
       </div>
     </div>
   </div>
   {{end}}
 
-  <div id="delete-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
-    <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
-      <h3 class="text-lg font-semibold">Delete Member Account</h3>
-      <p class="mt-2 text-sm text-slate-300">Are you sure you want to delete this account? This action cannot be undone.</p>
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+    <div class="rounded-xl border border-hairline bg-white p-6 shadow-2xl max-w-sm w-full mx-4">
+      <h3 class="text-lg font-medium text-ink">Delete Member Account</h3>
+      <p class="mt-2 text-sm text-slate">Are you sure you want to delete this account? This action cannot be undone.</p>
       <div class="mt-5 flex justify-end gap-3">
-        <button onclick="document.getElementById('delete-modal').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">No</button>
-        <button hx-post="/delete-member" hx-vals='{"member_id":"{{.View.Member.ID}}"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-400">Yes</button>
+        <button onclick="document.getElementById('delete-modal').classList.add('hidden')" class="rounded-full border border-hairline-strong px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface">No</button>
+        <button hx-post="/delete-member" hx-vals='{"member_id":"{{.View.Member.ID}}"}' hx-target="#member-content" hx-swap="outerHTML" onclick="document.getElementById('delete-modal').classList.add('hidden')" class="rounded-full bg-red-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600">Yes</button>
       </div>
     </div>
   </div>
@@ -177,15 +179,74 @@
 {{end}}
 
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{{.View.Member.Name}} | Pillars</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-green': '#00ed64',
+            'brand-green-dark': '#00684a',
+            'brand-green-mid': '#00a35c',
+            'brand-green-soft': '#c3f0d2',
+            'brand-teal-deep': '#001e2b',
+            'brand-teal': '#003d4f',
+            'brand-teal-mid': '#00684a',
+            'accent-purple': '#7b3ff2',
+            'accent-orange': '#fa6e39',
+            'accent-pink': '#f06bb8',
+            'accent-blue': '#3d4f9f',
+            'canvas': '#ffffff',
+            'canvas-dark': '#001e2b',
+            'surface': '#f9fbfa',
+            'surface-soft': '#f4f7f6',
+            'surface-feature': '#e3fcef',
+            'hairline': '#e1e5e8',
+            'hairline-soft': '#eceff1',
+            'hairline-strong': '#c1ccd6',
+            'hairline-dark': '#1c2d38',
+            'ink': '#001e2b',
+            'charcoal': '#1c2d38',
+            'slate-custom': '#3d4f5b',
+            'steel': '#5c6c7a',
+            'stone': '#7c8c9a',
+            'muted': '#a8b3bc',
+            'on-dark': '#ffffff',
+            'on-dark-muted': '#a8b3bc',
+            'on-primary': '#001e2b',
+            'primary-pressed': '#008c34',
+          },
+          fontFamily: {
+            'display': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          borderRadius: {
+            'xs': '4px',
+            'sm': '6px',
+            'md': '8px',
+            'lg': '12px',
+            'xl': '16px',
+            'xxl': '24px',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .text-slate { color: #3d4f5b; }
+    .text-charcoal { color: #1c2d38; }
+  </style>
 </head>
-<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+<body class="min-h-full bg-canvas text-ink">
   <div id="toast" class="z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg opacity-0 transition-all duration-300 pointer-events-none"></div>
   {{template "content" .}}
   <script>
@@ -240,7 +301,7 @@
       if (!t) return;
       var d = e.detail;
       t.textContent = d.message;
-      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-500' : 'bg-brand-green');
       if (lastClickPos) {
         t.style.position = 'fixed';
         t.style.left = lastClickPos.x + 'px';

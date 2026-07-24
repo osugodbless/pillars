@@ -1,80 +1,80 @@
 {{define "content"}}
 <div id="index-content">
   <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-    <header class="rounded-3xl border border-white/10 bg-white/10 p-6 shadow-2xl backdrop-blur">
+    <header class="rounded-2xl border border-hairline bg-white p-8 shadow-lg">
       <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p class="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">Pillars Cooperative</p>
-          <h1 class="mt-2 text-3xl font-semibold sm:text-4xl">Together, we'll build a brighter future.</h1>
-          <p class="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">Track members, attendance, dues, fines, and events in one calm, modern workspace.</p>
+          <p class="text-xs font-semibold uppercase tracking-widest text-brand-green-dark">Pillars Cooperative</p>
+          <h1 class="mt-2 text-4xl font-medium tracking-tight text-ink sm:text-5xl" style="line-height: 1.15; letter-spacing: -1px;">Together, we'll build a brighter future.</h1>
+          <p class="mt-3 max-w-2xl text-base text-slate" style="line-height: 1.55;">Track members, attendance, dues, fines, and events in one calm, modern workspace.</p>
         </div>
-        <div class="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100">
-          <p class="font-medium">Today’s focus</p>
-          <p class="mt-1 text-cyan-200">Review attendance and outstanding obligations.</p>
+        <div class="rounded-xl bg-surface-feature px-5 py-4" style="border: 2px solid #00ed64;">
+          <p class="text-sm font-semibold text-brand-green-dark">Today's focus</p>
+          <p class="mt-1 text-sm text-charcoal">Review attendance and outstanding obligations.</p>
         </div>
       </div>
     </header>
 
-    <section class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
-        <p class="text-sm text-slate-400">Total members</p>
-        <p class="mt-2 text-3xl font-semibold">{{.Stats.TotalMembers}}</p>
+    <section class="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <p class="text-sm text-steel">Total members</p>
+        <p class="mt-2 text-3xl font-medium text-ink" style="letter-spacing: -0.5px;">{{.Stats.TotalMembers}}</p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
-        <p class="text-sm text-slate-400">Probation members</p>
-        <p class="mt-2 text-3xl font-semibold">{{.Stats.ProbationMembers}}</p>
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <p class="text-sm text-steel">Probation members</p>
+        <p class="mt-2 text-3xl font-medium text-ink" style="letter-spacing: -0.5px;">{{.Stats.ProbationMembers}}</p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
-        <p class="text-sm text-slate-400">At-Risk members</p>
-        <p class="mt-2 text-3xl font-semibold text-rose-400">{{.Stats.AtRiskMembersCount}}</p>
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <p class="text-sm text-steel">At-Risk members</p>
+        <p class="mt-2 text-3xl font-medium text-red-500" style="letter-spacing: -0.5px;">{{.Stats.AtRiskMembersCount}}</p>
       </div>
-      <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-5 shadow-lg">
-        <p class="text-sm text-slate-400">Open events</p>
-        <p class="mt-2 text-3xl font-semibold">{{.Stats.OpenEvents}}</p>
+      <div class="rounded-xl border border-hairline bg-white p-5">
+        <p class="text-sm text-steel">Open events</p>
+        <p class="mt-2 text-3xl font-medium text-ink" style="letter-spacing: -0.5px;">{{.Stats.OpenEvents}}</p>
       </div>
     </section>
 
     {{if .ProbationReview}}
-    <section class="mt-8 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-6 shadow-xl">
-      <h2 class="text-xl font-semibold text-amber-200">Probation Review Due</h2>
-      <p class="mt-1 text-sm text-amber-300/70">The following members have completed their probation period and are ready for review.</p>
+    <section class="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+      <h2 class="text-xl font-medium text-amber-800">Probation Review Due</h2>
+      <p class="mt-1 text-sm text-amber-700">The following members have completed their probation period and are ready for review.</p>
       <div class="mt-4 space-y-3">
         {{range .ProbationReview}}
-        <div class="rounded-2xl border border-amber-500/20 bg-slate-950/70 p-4">
+        <div class="rounded-xl border border-amber-200 bg-white p-4">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p class="font-medium text-slate-100">{{.Name}}</p>
-              <p class="text-xs text-slate-400">Probation ended: {{.ProbationEnds}}</p>
+              <p class="font-medium text-ink">{{.Name}}</p>
+              <p class="text-xs text-steel">Probation ended: {{.ProbationEnds}}</p>
             </div>
             <div class="flex flex-wrap gap-2">
-              <button onclick="document.getElementById('promote-modal-{{.ID}}').classList.remove('hidden')" class="rounded-lg bg-emerald-500/70 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-400">Promote to Active</button>
-              <button onclick="document.getElementById('extend-modal-{{.ID}}').classList.remove('hidden')" class="rounded-lg bg-amber-500/70 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-400">Extend Probation</button>
+              <button onclick="document.getElementById('promote-modal-{{.ID}}').classList.remove('hidden')" class="rounded-full bg-brand-green px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Promote to Active</button>
+              <button onclick="document.getElementById('extend-modal-{{.ID}}').classList.remove('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">Extend Probation</button>
             </div>
           </div>
         </div>
 
-        <div id="promote-modal-{{.ID}}" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
-          <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
-            <h3 class="text-lg font-semibold">Promote to Active</h3>
-            <p class="mt-2 text-sm text-slate-300">Promote <strong>{{.Name}}</strong> to active member? They will be marked as a bonafide member.</p>
+        <div id="promote-modal-{{.ID}}" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+          <div class="rounded-xl border border-hairline bg-white p-6 shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-medium text-ink">Promote to Active</h3>
+            <p class="mt-2 text-sm text-slate">Promote <strong class="text-charcoal">{{.Name}}</strong> to active member? They will be marked as a bonafide member.</p>
             <div class="mt-5 flex justify-end gap-3">
-              <button onclick="document.getElementById('promote-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">No</button>
-              <button hx-post="/promote-to-active" hx-vals='{"member_id":"{{.ID}}","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('promote-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400">Yes</button>
+              <button onclick="document.getElementById('promote-modal-{{.ID}}').classList.add('hidden')" class="rounded-full border border-hairline-strong px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface">No</button>
+              <button hx-post="/promote-to-active" hx-vals='{"member_id":"{{.ID}}","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('promote-modal-{{.ID}}').classList.add('hidden')" class="rounded-full bg-brand-green px-4 py-2 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Yes</button>
             </div>
           </div>
         </div>
 
-        <div id="extend-modal-{{.ID}}" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/60">
-          <div class="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-2xl max-w-sm w-full mx-4">
-            <h3 class="text-lg font-semibold">Extend Probation</h3>
-            <p class="mt-2 text-sm text-slate-300">Extend probation for <strong>{{.Name}}</strong> by:</p>
+        <div id="extend-modal-{{.ID}}" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50">
+          <div class="rounded-xl border border-hairline bg-white p-6 shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-medium text-ink">Extend Probation</h3>
+            <p class="mt-2 text-sm text-slate">Extend probation for <strong class="text-charcoal">{{.Name}}</strong> by:</p>
             <div class="mt-4 flex flex-col gap-2">
-              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"1","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">1 month</button>
-              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"2","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">2 months</button>
-              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"3","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl border border-amber-500/30 px-4 py-2 text-sm font-semibold text-amber-300 transition hover:bg-amber-500/20">3 months</button>
+              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"1","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">1 month</button>
+              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"2","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">2 months</button>
+              <button hx-post="/extend-probation" hx-vals='{"member_id":"{{.ID}}","months":"3","source":"index"}' hx-target="#index-content" hx-swap="outerHTML" onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50">3 months</button>
             </div>
             <div class="mt-4 flex justify-end">
-              <button onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-xl border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">Cancel</button>
+              <button onclick="document.getElementById('extend-modal-{{.ID}}').classList.add('hidden')" class="rounded-full border border-hairline-strong px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-surface">Cancel</button>
             </div>
           </div>
         </div>
@@ -83,46 +83,46 @@
     </section>
     {{end}}
 
-    <section class="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-      <h2 class="text-xl font-semibold">Treasury & Financial summary</h2>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-2xl border border-cyan-400/30 bg-cyan-950/40 p-4 lg:col-span-2">
-          <p class="text-sm text-cyan-200">Total Treasury Balance</p>
-          <p class="mt-1 text-3xl font-semibold text-cyan-300">₦{{printf "%.2f" .Stats.TotalTreasuryBalance}}</p>
+    <section class="mt-8 rounded-2xl border border-hairline bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-medium text-ink">Treasury & Financial summary</h2>
+      <div class="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-xl bg-brand-teal-deep p-5 text-on-dark lg:col-span-2" style="border: 1px solid #1c2d38;">
+          <p class="text-sm text-on-dark-muted">Total Treasury Balance</p>
+          <p class="mt-1 text-3xl font-medium text-brand-green" style="letter-spacing: -0.5px;">₦{{printf "%.2f" .Stats.TotalTreasuryBalance}}</p>
         </div>
-        <div class="rounded-2xl border border-orange-400/30 bg-orange-950/40 p-4 lg:col-span-2">
-          <p class="text-sm text-orange-200">Total Outstanding Receivables (Arrears)</p>
-          <p class="mt-1 text-3xl font-semibold text-orange-300">₦{{printf "%.2f" .Stats.TotalOutstandingReceivables}}</p>
+        <div class="rounded-xl bg-surface-feature p-5 lg:col-span-2" style="border: 2px solid #00ed64;">
+          <p class="text-sm text-brand-green-dark">Total Outstanding Receivables (Arrears)</p>
+          <p class="mt-1 text-3xl font-medium text-amber-600" style="letter-spacing: -0.5px;">₦{{printf "%.2f" .Stats.TotalOutstandingReceivables}}</p>
         </div>
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-          <p class="text-sm text-slate-400">Total dues paid</p>
-          <p class="mt-1 text-2xl font-semibold text-emerald-300">₦{{printf "%.2f" .Stats.TotalDuesPaid}}</p>
+        <div class="rounded-xl border border-hairline bg-white p-5">
+          <p class="text-sm text-steel">Total dues paid</p>
+          <p class="mt-1 text-2xl font-medium text-emerald-600" style="letter-spacing: -0.5px;">₦{{printf "%.2f" .Stats.TotalDuesPaid}}</p>
         </div>
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-          <p class="text-sm text-slate-400">Total dues owed</p>
-          <p class="mt-1 text-2xl font-semibold text-amber-300">₦{{printf "%.2f" .Stats.TotalDuesOwed}}</p>
+        <div class="rounded-xl border border-hairline bg-white p-5">
+          <p class="text-sm text-steel">Total dues owed</p>
+          <p class="mt-1 text-2xl font-medium text-amber-600" style="letter-spacing: -0.5px;">₦{{printf "%.2f" .Stats.TotalDuesOwed}}</p>
         </div>
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4 lg:col-span-2">
-          <p class="text-sm text-slate-400">Total fines</p>
-          <p class="mt-1 text-2xl font-semibold text-red-300">₦{{printf "%.2f" .Stats.TotalFines}}</p>
-          <div class="mt-2 flex items-center gap-3 text-xs text-slate-400">
-            <span>Owed: <span class="font-medium text-red-300">₦{{printf "%.2f" .Stats.FinesOwed}}</span></span>
-            <span>Paid: <span class="font-medium text-emerald-300">₦{{printf "%.2f" .Stats.FinesPaid}}</span></span>
+        <div class="rounded-xl border border-hairline bg-white p-5 lg:col-span-2">
+          <p class="text-sm text-steel">Total fines</p>
+          <p class="mt-1 text-2xl font-medium text-red-500" style="letter-spacing: -0.5px;">₦{{printf "%.2f" .Stats.TotalFines}}</p>
+          <div class="mt-2 flex items-center gap-4 text-xs text-steel">
+            <span>Owed: <span class="font-medium text-red-500">₦{{printf "%.2f" .Stats.FinesOwed}}</span></span>
+            <span>Paid: <span class="font-medium text-emerald-600">₦{{printf "%.2f" .Stats.FinesPaid}}</span></span>
           </div>
         </div>
       </div>
 
       {{if .Stats.EventFundingProgress}}
-      <h3 class="mt-6 text-lg font-semibold">Event Funding Progress</h3>
+      <h3 class="mt-6 text-lg font-medium text-ink">Event Funding Progress</h3>
       <div class="mt-4 space-y-4">
         {{range .Stats.EventFundingProgress}}
-        <div class="rounded-xl border border-white/5 bg-slate-950/40 p-4">
+        <div class="rounded-xl border border-hairline bg-surface p-4">
           <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-slate-200">{{.Title}}</span>
-            <span class="text-sm text-slate-400">₦{{printf "%.2f" .TotalCollected}} / ₦{{printf "%.2f" .GoalAmount}} ({{printf "%.0f" .Percentage}}%)</span>
+            <span class="text-sm font-medium text-charcoal">{{.Title}}</span>
+            <span class="text-sm text-steel">₦{{printf "%.2f" .TotalCollected}} / ₦{{printf "%.2f" .GoalAmount}} ({{printf "%.0f" .Percentage}}%)</span>
           </div>
-          <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-800">
-            <div class="h-full bg-cyan-400" style="width: {{printf "%.0f" .Percentage}}%"></div>
+          <div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-hairline">
+            <div class="h-full bg-brand-green" style="width: {{printf "%.0f" .Percentage}}%"></div>
           </div>
         </div>
         {{end}}
@@ -130,32 +130,32 @@
       {{end}}
     </section>
 
-    <section class="mt-8 rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-      <h2 class="text-xl font-semibold">Reports</h2>
-      <p class="mt-1 text-sm text-slate-400">Generate financial reports for committee review.</p>
-      <div class="mt-4 grid gap-4 sm:grid-cols-2">
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-          <h3 class="font-medium text-slate-200">Committee Consolidated Financial Report</h3>
-          <p class="mt-1 text-xs text-slate-400">View all members' financial activity for a specific date range.</p>
+    <section class="mt-8 rounded-2xl border border-hairline bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-medium text-ink">Reports</h2>
+      <p class="mt-1 text-sm text-steel">Generate financial reports for committee review.</p>
+      <div class="mt-4 grid gap-5 sm:grid-cols-2">
+        <div class="rounded-xl border border-hairline bg-surface p-5">
+          <h3 class="font-medium text-charcoal">Committee Consolidated Financial Report</h3>
+          <p class="mt-1 text-xs text-steel">View all members' financial activity for a specific date range.</p>
           <form action="/reports/committee" method="get" class="mt-3 space-y-3">
             <div class="flex gap-2">
               <div class="w-full">
-                <label class="block text-xs text-slate-400 mb-1">From</label>
-                <input name="from" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                <label class="block text-xs font-medium text-steel mb-1">From</label>
+                <input name="from" type="date" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
               </div>
               <div class="w-full">
-                <label class="block text-xs text-slate-400 mb-1">To</label>
-                <input name="to" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                <label class="block text-xs font-medium text-steel mb-1">To</label>
+                <input name="to" type="date" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
               </div>
             </div>
-            <button type="submit" class="w-full rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400">Download PDF</button>
+            <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Download PDF</button>
           </form>
         </div>
-        <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-          <h3 class="font-medium text-slate-200">Arrears & Debt Aging Report</h3>
-          <p class="mt-1 text-xs text-slate-400">View all outstanding debts sorted by amount owed.</p>
+        <div class="rounded-xl border border-hairline bg-surface p-5">
+          <h3 class="font-medium text-charcoal">Arrears & Debt Aging Report</h3>
+          <p class="mt-1 text-xs text-steel">View all outstanding debts sorted by amount owed.</p>
           <form action="/reports/arrears" method="get" class="mt-3">
-            <button type="submit" class="w-full rounded-xl bg-orange-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-orange-400">Download PDF</button>
+            <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Download PDF</button>
           </form>
         </div>
       </div>
@@ -163,121 +163,121 @@
 
     <section class="mt-8 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
       <div class="space-y-6">
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
+        <div class="rounded-2xl border border-hairline bg-white p-6 shadow-sm">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Quick actions</h2>
-            <button id="menu-toggle" type="button" class="rounded-full border border-cyan-400/30 bg-cyan-500/10 p-3 text-cyan-200 transition hover:bg-cyan-500/20 sm:hidden" aria-label="Open quick actions menu">
-              ☰
+            <h2 class="text-xl font-medium text-ink">Quick actions</h2>
+            <button id="menu-toggle" type="button" class="rounded-full border border-hairline-strong bg-white p-3 text-ink transition-colors hover:bg-surface sm:hidden" aria-label="Open quick actions menu">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
             </button>
           </div>
 
-          <div id="quick-actions-menu" class="mt-4 hidden rounded-2xl border border-white/10 bg-slate-950/70 p-3 sm:hidden">
+          <div id="quick-actions-menu" class="mt-4 hidden rounded-xl border border-hairline bg-surface p-4 sm:hidden">
             <div class="grid gap-2 sm:grid-cols-2">
-              <button type="button" data-toggle-form="member-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Add member</button>
-              <button type="button" data-toggle-form="attendance-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Attendance & dues</button>
-              <button type="button" data-toggle-form="event-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Add event</button>
-              <button type="button" data-toggle-form="fine-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Custom fine</button>
-              <button type="button" data-toggle-form="export-attendance-form" class="rounded-xl border border-white/10 bg-slate-900/70 px-3 py-2 text-left text-sm text-slate-100 transition hover:border-cyan-400/40">Export Attendance</button>
+              <button type="button" data-toggle-form="member-form" class="rounded-lg border border-hairline bg-white px-4 py-2.5 text-left text-sm font-medium text-charcoal transition-colors hover:border-brand-green-dark hover:bg-surface-feature">Add member</button>
+              <button type="button" data-toggle-form="attendance-form" class="rounded-lg border border-hairline bg-white px-4 py-2.5 text-left text-sm font-medium text-charcoal transition-colors hover:border-brand-green-dark hover:bg-surface-feature">Attendance & dues</button>
+              <button type="button" data-toggle-form="event-form" class="rounded-lg border border-hairline bg-white px-4 py-2.5 text-left text-sm font-medium text-charcoal transition-colors hover:border-brand-green-dark hover:bg-surface-feature">Add event</button>
+              <button type="button" data-toggle-form="fine-form" class="rounded-lg border border-hairline bg-white px-4 py-2.5 text-left text-sm font-medium text-charcoal transition-colors hover:border-brand-green-dark hover:bg-surface-feature">Custom fine</button>
+              <button type="button" data-toggle-form="export-attendance-form" class="rounded-lg border border-hairline bg-white px-4 py-2.5 text-left text-sm font-medium text-charcoal transition-colors hover:border-brand-green-dark hover:bg-surface-feature">Export Attendance</button>
             </div>
           </div>
 
-          <div class="mt-4 grid gap-4">
+          <div class="mt-4 grid gap-5">
           <div id="member-form" class="hidden sm:block">
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <h3 class="font-medium">Add member</h3>
+            <div class="rounded-xl border border-hairline bg-surface p-5">
+              <h3 class="font-medium text-charcoal">Add member</h3>
               <form hx-post="/members" hx-target="#index-content" hx-swap="outerHTML" class="mt-3 space-y-3">
-                <input name="name" placeholder="Name" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="email" placeholder="Email" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="phone" placeholder="Phone" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <select name="status" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0">
+                <input name="name" placeholder="Name" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="email" placeholder="Email" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="phone" placeholder="Phone" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <select name="status" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;">
                   <option value="probation">Probation</option>
                   <option value="active">Active</option>
                 </select>
-                <button type="submit" class="w-full rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400">Save member</button>
+                <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Save member</button>
               </form>
             </div>
           </div>
 
           <div id="attendance-form" class="mt-4 hidden sm:block">
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <h3 class="font-medium">Monthly attendance & dues</h3>
+            <div class="rounded-xl border border-hairline bg-surface p-5">
+              <h3 class="font-medium text-charcoal">Monthly attendance & dues</h3>
               <form hx-post="/attendance" hx-target="#index-content" hx-swap="outerHTML" class="mt-3 space-y-3">
-                <input name="meeting_date" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <div class="space-y-2 rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                <input name="meeting_date" type="date" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <div class="space-y-2 rounded-lg border border-hairline bg-white p-4">
                   {{range .Members}}
-                  <label class="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm">
-                    <span>{{.Name}}</span>
-                    <div class="flex items-center gap-2">
-                      <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
-                      <span class="text-xs uppercase tracking-wide text-slate-400">Present</span>
-                      <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
-                        <input type="checkbox" name="dues_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
+                  <label class="flex items-center justify-between rounded-lg border border-hairline bg-surface px-3 py-2.5 text-sm">
+                    <span class="text-charcoal">{{.Name}}</span>
+                    <div class="flex items-center gap-3">
+                      <input type="checkbox" name="present_{{.ID}}" value="1" class="h-4 w-4 rounded border-hairline-strong text-brand-green focus:ring-brand-green-dark" />
+                      <span class="text-xs font-medium uppercase tracking-wider text-steel">Present</span>
+                      <label class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-steel">
+                        <input type="checkbox" name="dues_{{.ID}}" value="1" class="h-4 w-4 rounded border-hairline-strong text-brand-green focus:ring-brand-green-dark" />
                         <span>Dues</span>
                       </label>
-                      <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
-                        <input type="checkbox" name="late_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-orange-500" />
+                      <label class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-steel">
+                        <input type="checkbox" name="late_{{.ID}}" value="1" class="h-4 w-4 rounded border-hairline-strong text-amber-500 focus:ring-amber-500" />
                         <span>Late</span>
                       </label>
-                      <label class="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
-                        <input type="checkbox" name="absenteeism_{{.ID}}" value="1" class="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500" />
+                      <label class="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-steel">
+                        <input type="checkbox" name="absenteeism_{{.ID}}" value="1" class="h-4 w-4 rounded border-hairline-strong text-red-500 focus:ring-red-500" />
                         <span>Fine</span>
                       </label>
                     </div>
                   </label>
                   {{end}}
                 </div>
-                <textarea name="note" placeholder="Optional note" class="min-h-[88px] w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0"></textarea>
-                <button type="submit" class="w-full rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400">Save monthly attendance</button>
+                <textarea name="note" placeholder="Optional note" class="min-h-[88px] w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0"></textarea>
+                <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Save monthly attendance</button>
               </form>
             </div>
           </div>
 
           <div id="event-form" class="mt-4 hidden sm:block">
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <h3 class="font-medium">Add event</h3>
+            <div class="rounded-xl border border-hairline bg-surface p-5">
+              <h3 class="font-medium text-charcoal">Add event</h3>
               <form hx-post="/events" hx-target="#index-content" hx-swap="outerHTML" class="mt-3 space-y-3">
-                <input name="title" placeholder="Title" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="description" placeholder="Description" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="date" type="date" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="min_amount_expected" placeholder="Minimum amount expected" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <button type="submit" class="w-full rounded-xl bg-amber-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-amber-400">Create event</button>
+                <input name="title" placeholder="Title" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="description" placeholder="Description" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="date" type="date" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="min_amount_expected" placeholder="Minimum amount expected" type="number" step="0.01" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Create event</button>
               </form>
             </div>
           </div>
 
           <div id="fine-form" class="mt-4 hidden sm:block">
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <h3 class="font-medium">Custom fine</h3>
+            <div class="rounded-xl border border-hairline bg-surface p-5">
+              <h3 class="font-medium text-charcoal">Custom fine</h3>
               <form hx-post="/fines" hx-target="#index-content" hx-swap="outerHTML" class="mt-3 space-y-3">
-                <select name="member_id" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0">
+                <select name="member_id" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;">
                   <option value="">Select member</option>
                   {{range $.Members}}
                   <option value="{{.ID}}">{{.Name}}</option>
                   {{end}}
                 </select>
-                <input name="amount" placeholder="Amount" type="number" step="0.01" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="reason" placeholder="Reason (e.g. insubordination, disrespect)" required class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <input name="fine_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
-                <button type="submit" class="w-full rounded-xl bg-red-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-400">Issue fine</button>
+                <input name="amount" placeholder="Amount" type="number" step="0.01" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="reason" placeholder="Reason (e.g. insubordination, disrespect)" required class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <input name="fine_date" type="date" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
+                <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Issue fine</button>
               </form>
             </div>
           </div>
 
           <div id="export-attendance-form" class="mt-4 hidden sm:block">
-            <div class="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
-              <h3 class="font-medium">Export Attendance</h3>
+            <div class="rounded-xl border border-hairline bg-surface p-5">
+              <h3 class="font-medium text-charcoal">Export Attendance</h3>
               <form action="/export-attendance" method="get" class="mt-3 space-y-3">
                 <div class="flex gap-2">
                   <div class="w-full">
-                    <label class="block text-xs text-slate-400 mb-1">Start Date</label>
-                    <input name="start_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                    <label class="block text-xs font-medium text-steel mb-1">Start Date</label>
+                    <input name="start_date" type="date" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
                   </div>
                   <div class="w-full">
-                    <label class="block text-xs text-slate-400 mb-1">End Date</label>
-                    <input name="end_date" type="date" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none ring-0" />
+                    <label class="block text-xs font-medium text-steel mb-1">End Date</label>
+                    <input name="end_date" type="date" class="w-full rounded-lg border border-hairline-strong bg-white px-3 py-2.5 text-sm text-ink outline-none transition-colors focus:border-brand-green-dark focus:ring-0" style="height: 44px;" />
                   </div>
                 </div>
-                <button type="submit" class="w-full rounded-xl bg-indigo-500 px-3 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400">Download PDF</button>
+                <button type="submit" class="w-full rounded-full bg-brand-green px-4 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-pressed">Download PDF</button>
               </form>
             </div>
           </div>
@@ -286,29 +286,29 @@
       </div>
 
       <div class="space-y-6">
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
+        <div class="rounded-2xl border border-hairline bg-white p-6 shadow-sm">
           <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold">Members</h2>
-            <span class="text-sm text-slate-400">{{len .Members}} active records</span>
+            <h2 class="text-xl font-medium text-ink">Members</h2>
+            <span class="text-sm text-steel">{{len .Members}} active records</span>
           </div>
-          <div class="mt-4 overflow-hidden rounded-2xl border border-white/10">
-            <table class="min-w-full divide-y divide-slate-800 text-sm">
-              <thead class="bg-slate-950/70 text-left text-slate-400">
+          <div class="mt-4 overflow-hidden rounded-xl border border-hairline">
+            <table class="min-w-full divide-y divide-hairline text-sm">
+              <thead class="bg-surface text-left text-steel">
                 <tr>
-                  <th class="px-3 py-3 font-medium">Name</th>
-                  <th class="px-3 py-3 font-medium">Status</th>
-                  <th class="px-3 py-3 font-medium">Balance</th>
+                  <th class="px-4 py-3 font-medium">Name</th>
+                  <th class="px-4 py-3 font-medium">Status</th>
+                  <th class="px-4 py-3 font-medium">Balance</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-slate-800 bg-slate-900/70">
+              <tbody class="divide-y divide-hairline bg-white">
                 {{range .Members}}
-                <tr>
-                  <td class="px-3 py-3">
-                    <a href="/member-detail?member_id={{.ID}}" class="font-medium text-cyan-300 hover:text-cyan-200">{{.Name}}</a>
-                    <div class="text-xs text-slate-400">{{.Email}}</div>
+                <tr class="transition-colors hover:bg-surface">
+                  <td class="px-4 py-3">
+                    <a href="/member-detail?member_id={{.ID}}" class="font-medium text-brand-green-dark hover:text-brand-green-mid">{{.Name}}</a>
+                    <div class="text-xs text-steel">{{.Email}}</div>
                   </td>
-                  <td class="px-3 py-3"><span class="rounded-full bg-slate-800 px-2.5 py-1 text-xs uppercase tracking-wide text-slate-300">{{.Status}}</span></td>
-                  <td class="px-3 py-3 text-slate-100">₦{{printf "%.2f" .Balance}}</td>
+                  <td class="px-4 py-3"><span class="rounded-full bg-surface px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-slate">{{.Status}}</span></td>
+                  <td class="px-4 py-3 text-charcoal">₦{{printf "%.2f" .Balance}}</td>
                 </tr>
                 {{end}}
               </tbody>
@@ -316,44 +316,44 @@
           </div>
         </div>
 
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-          <h2 class="text-xl font-semibold">Events</h2>
+        <div class="rounded-2xl border border-hairline bg-white p-6 shadow-sm">
+          <h2 class="text-xl font-medium text-ink">Events</h2>
           <div class="mt-4 space-y-3">
             {{range .Events}}
-            <a href="/event-detail?event_id={{.ID}}" class="block rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-400/40">
+            <a href="/event-detail?event_id={{.ID}}" class="block rounded-xl border border-hairline bg-surface p-4 transition-colors hover:border-brand-green-dark hover:bg-white">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <h3 class="font-medium text-slate-100">{{.Title}}</h3>
-                  <p class="text-sm text-slate-400">{{.Description}}</p>
+                  <h3 class="font-medium text-charcoal">{{.Title}}</h3>
+                  <p class="text-sm text-steel">{{.Description}}</p>
                 </div>
-                <span class="rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs uppercase tracking-wide text-emerald-300">{{.Status}}</span>
+                <span class="rounded-full bg-brand-green-soft px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-brand-green-dark">{{.Status}}</span>
               </div>
-              <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+              <div class="mt-3 flex flex-wrap items-center gap-3 text-sm text-steel">
                 <span>Date: {{.Date}}</span>
                 <span>Minimum Expected: ₦{{printf "%.2f" .MinAmountExpected}}</span>
               </div>
             </a>
             {{else}}
-            <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">No events yet.</p>
+            <p class="rounded-xl border border-dashed border-hairline-strong bg-surface p-4 text-sm text-steel">No events yet.</p>
             {{end}}
           </div>
         </div>
 
-        <div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 shadow-xl">
-          <h2 class="text-xl font-semibold">Recent attendance</h2>
+        <div class="rounded-2xl border border-hairline bg-white p-6 shadow-sm">
+          <h2 class="text-xl font-medium text-ink">Recent attendance</h2>
           <div class="mt-4 space-y-3">
             {{range .AttendanceGroups}}
-            <a href="/attendance-detail?date={{.MeetingDate}}" class="block rounded-2xl border border-white/10 bg-slate-950/70 p-4 transition hover:border-cyan-400/40">
+            <a href="/attendance-detail?date={{.MeetingDate}}" class="block rounded-xl border border-hairline bg-surface p-4 transition-colors hover:border-brand-green-dark hover:bg-white">
               <div class="flex items-center justify-between gap-3">
                 <div>
-                  <p class="text-sm font-medium text-slate-100">{{.MeetingDate}}</p>
-                  <p class="text-xs uppercase tracking-wide text-slate-400">{{.Count}} records</p>
+                  <p class="text-sm font-medium text-charcoal">{{.MeetingDate}}</p>
+                  <p class="text-xs font-medium uppercase tracking-wide text-steel">{{.Count}} records</p>
                 </div>
-                <span class="rounded-full bg-cyan-500/15 px-2.5 py-1 text-xs uppercase tracking-wide text-cyan-300">{{.Status}}</span>
+                <span class="rounded-full bg-surface-feature px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-brand-green-dark">{{.Status}}</span>
               </div>
             </a>
             {{else}}
-            <p class="rounded-2xl border border-dashed border-slate-700 p-4 text-sm text-slate-400">No attendance yet.</p>
+            <p class="rounded-xl border border-dashed border-hairline-strong bg-surface p-4 text-sm text-steel">No attendance yet.</p>
             {{end}}
           </div>
         </div>
@@ -364,15 +364,74 @@
 {{end}}
 
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pillars Cooperative</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'brand-green': '#00ed64',
+            'brand-green-dark': '#00684a',
+            'brand-green-mid': '#00a35c',
+            'brand-green-soft': '#c3f0d2',
+            'brand-teal-deep': '#001e2b',
+            'brand-teal': '#003d4f',
+            'brand-teal-mid': '#00684a',
+            'accent-purple': '#7b3ff2',
+            'accent-orange': '#fa6e39',
+            'accent-pink': '#f06bb8',
+            'accent-blue': '#3d4f9f',
+            'canvas': '#ffffff',
+            'canvas-dark': '#001e2b',
+            'surface': '#f9fbfa',
+            'surface-soft': '#f4f7f6',
+            'surface-feature': '#e3fcef',
+            'hairline': '#e1e5e8',
+            'hairline-soft': '#eceff1',
+            'hairline-strong': '#c1ccd6',
+            'hairline-dark': '#1c2d38',
+            'ink': '#001e2b',
+            'charcoal': '#1c2d38',
+            'slate-custom': '#3d4f5b',
+            'steel': '#5c6c7a',
+            'stone': '#7c8c9a',
+            'muted': '#a8b3bc',
+            'on-dark': '#ffffff',
+            'on-dark-muted': '#a8b3bc',
+            'on-primary': '#001e2b',
+            'primary-pressed': '#008c34',
+          },
+          fontFamily: {
+            'display': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          borderRadius: {
+            'xs': '4px',
+            'sm': '6px',
+            'md': '8px',
+            'lg': '12px',
+            'xl': '16px',
+            'xxl': '24px',
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .text-slate { color: #3d4f5b; }
+    .text-charcoal { color: #1c2d38; }
+  </style>
 </head>
-<body class="min-h-full bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100">
+<body class="min-h-full bg-canvas text-ink">
   <div id="toast" class="z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg opacity-0 transition-all duration-300 pointer-events-none"></div>
   {{template "content" .}}
   <script>
@@ -407,7 +466,7 @@
       if (!t) return;
       var d = e.detail;
       t.textContent = d.message;
-      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-600' : 'bg-emerald-600');
+      t.className = 'z-50 rounded-xl px-4 py-2 text-sm text-white shadow-lg transition-all duration-300 ' + (d.type === 'error' ? 'bg-red-500' : 'bg-brand-green');
       if (lastClickPos) {
         t.style.position = 'fixed';
         t.style.left = lastClickPos.x + 'px';
