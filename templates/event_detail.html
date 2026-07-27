@@ -8,14 +8,19 @@
       <header class="border-b border-warm-200 pb-6 mb-8">
         <a href="/" class="text-xs font-medium text-accent hover:underline">&larr; Dashboard</a>
         <h1 class="mt-3 text-2xl font-bold tracking-tight text-near-black">{{.Event.Title}}</h1>
-        <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium uppercase tracking-[0.1em] text-warm-500">
-          <span>Date: <span class="text-near-black">{{.Event.Date}}</span></span>
-          <span>Status: <span class="text-near-black">{{.Event.Status}}</span></span>
-          <span>Expected: <span class="text-near-black">₦{{printf "%.2f" .Event.MinAmountExpected}}</span></span>
-          <span>Collected: <span class="text-near-black">₦{{printf "%.2f" .TotalCollected}}</span></span>
-        </div>
+<div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium uppercase tracking-[0.1em] text-warm-500">
+<span>Date: <span class="text-near-black">{{.Event.Date}}</span></span>
+<span>Status:
+{{if eq .Event.Status "open"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-active-light text-active">Open</span>
+{{else if eq .Event.Status "settled"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Settled</span>
+{{else}}<span class="text-near-black">{{.Event.Status}}</span>
+{{end}}
+</span>
+<span>Expected: <span class="text-near-black">₦{{formatNaira .Event.MinAmountExpected}}</span></span>
+<span>Collected: <span class="text-near-black">₦{{formatNaira .TotalCollected}}</span></span>
+</div>
         {{if .Event.Description}}
-        <p class="mt-2 text-sm text-warm-700">{{.Event.Description}}</p>
+        <p class="mt-2 text-sm text-warm-700 break-words">{{.Event.Description}}</p>
         {{end}}
       </header>
 
@@ -28,10 +33,10 @@
             </div>
             <ul id="members-list" class="divide-y divide-warm-200">
               {{range .Members}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm" data-member-name="{{.Name}}">
-                <span class="text-warm-700">{{.Name}}</span>
-                <span class="text-warm-500 text-xs">{{.Status}}</span>
-              </li>
+<li class="flex items-center justify-between px-4 py-2.5 text-sm" data-member-name="{{.Name}}">
+<span class="text-warm-700 break-words">{{.Name}}</span>
+<span class="text-xs">{{if eq .Status "paid"}}{{else if eq .Status "partially_paid"}}{{else if eq .Status "settled"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Paid</span>{{else}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Not Paid</span>{{end}}</span>
+</li>
               {{end}}
             </ul>
             <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
@@ -45,17 +50,17 @@
         <section>
           <h2 class="text-xs font-semibold uppercase tracking-[0.12em] text-warm-500 mb-3">Contributions</h2>
           <div class="border border-warm-200">
-            <ul id="contributions-list" class="divide-y divide-warm-200">
-              {{range .Members}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span class="text-warm-700">{{.Name}}</span>
-                <div class="flex items-center gap-2">
-                  <span class="text-warm-500 text-xs">{{.Status}}</span>
-                  {{if gt .Balance 0.0}}<span class="tabular-nums text-xs text-warm-500">₦{{printf "%.2f" .Balance}}</span>{{end}}
-                </div>
-              </li>
-              {{end}}
-            </ul>
+<ul id="contributions-list" class="divide-y divide-warm-200">
+{{range .Members}}
+<li class="flex items-center justify-between px-4 py-2.5 text-sm">
+<span class="text-warm-700 break-words">{{.Name}}</span>
+<div class="flex items-center gap-2">
+{{if eq .Status "paid"}}{{else if eq .Status "partially_paid"}}{{else if eq .Status "settled"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Paid</span>{{else if gt .Balance 0.0}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">Partially Paid</span>{{else}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Not Paid</span>{{end}}
+{{if gt .Balance 0.0}}<span class="tabular-nums text-xs text-warm-500">₦{{formatNaira .Balance}}</span>{{end}}
+</div>
+</li>
+{{end}}
+</ul>
             <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
               <button id="contributions-prev" onclick="pagePrev('contributions')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
               <span id="contributions-page" class="text-xs text-warm-500">1 of 1</span>
@@ -79,11 +84,11 @@
             <div class="grid grid-cols-2 gap-4 text-center">
               <div>
                 <p class="text-xs uppercase tracking-[0.1em] text-warm-500">Collected</p>
-                <p class="mt-1 text-lg font-bold tabular-nums text-accent">₦{{printf "%.2f" .TotalCollected}}</p>
+                <p class="mt-1 text-lg font-bold tabular-nums text-accent">₦{{formatNaira .TotalCollected}}</p>
               </div>
               <div>
                 <p class="text-xs uppercase tracking-[0.1em] text-warm-500">Expected</p>
-                <p class="mt-1 text-lg font-bold tabular-nums text-near-black">₦{{printf "%.2f" .Event.MinAmountExpected}}</p>
+                <p class="mt-1 text-lg font-bold tabular-nums text-near-black">₦{{formatNaira .Event.MinAmountExpected}}</p>
               </div>
             </div>
           </div>

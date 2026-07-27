@@ -17,7 +17,7 @@
           <p class="mt-0.5 text-xs font-medium uppercase tracking-[0.1em] text-warm-500">Total Members</p>
         </div>
         <div>
-          <p class="text-3xl font-bold tabular-nums text-near-black">{{.Stats.ProbationMembers}}</p>
+          <p class="text-3xl font-bold tabular-nums text-warning">{{.Stats.ProbationMembers}}</p>
           <p class="mt-0.5 text-xs font-medium uppercase tracking-[0.1em] text-warm-500">On Probation</p>
         </div>
         <div>
@@ -105,31 +105,31 @@
             <tbody class="divide-y divide-warm-200">
               <tr>
                 <td class="px-4 py-3 font-medium text-near-black">Total Treasury Balance</td>
-                <td class="px-4 py-3 text-right tabular-nums font-bold text-near-black text-lg">₦{{printf "%.2f" .Stats.TotalTreasuryBalance}}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-bold text-near-black text-lg">₦{{formatNaira .Stats.TotalTreasuryBalance}}</td>
               </tr>
               <tr>
                 <td class="px-4 py-3 font-medium text-near-black">Outstanding Receivables</td>
-                <td class="px-4 py-3 text-right tabular-nums font-bold text-danger text-lg">₦{{printf "%.2f" .Stats.TotalOutstandingReceivables}}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-bold text-danger text-lg">₦{{formatNaira .Stats.TotalOutstandingReceivables}}</td>
               </tr>
               <tr class="bg-warm-50">
                 <td class="px-4 py-3 font-medium text-near-black">Dues Paid</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .Stats.TotalDuesPaid}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .Stats.TotalDuesPaid}}</td>
               </tr>
               <tr class="bg-warm-50">
                 <td class="px-4 py-3 font-medium text-near-black">Dues Owed</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .Stats.TotalDuesOwed}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .Stats.TotalDuesOwed}}</td>
               </tr>
               <tr>
                 <td class="px-4 py-3 font-medium text-near-black">Fines Total</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .Stats.TotalFines}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .Stats.TotalFines}}</td>
               </tr>
               <tr class="bg-warm-50">
                 <td class="px-4 py-3 pl-8 text-warm-500">Owed</td>
-                <td class="px-4 py-3 text-right tabular-nums text-danger">₦{{printf "%.2f" .Stats.FinesOwed}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-danger">₦{{formatNaira .Stats.FinesOwed}}</td>
               </tr>
               <tr class="bg-warm-50">
                 <td class="px-4 py-3 pl-8 text-warm-500">Paid</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .Stats.FinesPaid}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .Stats.FinesPaid}}</td>
               </tr>
             </tbody>
           </table>
@@ -152,9 +152,9 @@
             <tbody class="divide-y divide-warm-200">
               {{range .Stats.EventFundingProgress}}
               <tr>
-                <td class="px-4 py-3 font-medium text-near-black">{{.Title}}</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .TotalCollected}}</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .GoalAmount}}</td>
+                <td class="px-4 py-3 font-medium text-near-black break-words">{{.Title}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .TotalCollected}}</td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .GoalAmount}}</td>
                 <td class="px-4 py-3 text-right tabular-nums font-medium text-near-black">{{printf "%.0f" .Percentage}}%</td>
               </tr>
               {{end}}
@@ -168,7 +168,7 @@
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xs font-semibold uppercase tracking-[0.12em] text-warm-500">Members</h2>
           <div class="flex items-center gap-3">
-            <input id="member-search" type="text" placeholder="Search members..." class="border border-warm-200 bg-white px-3 py-1.5 text-xs text-near-black outline-none transition-colors focus:border-accent w-48" oninput="filterMembers()" />
+            <input id="member-search" type="search" placeholder="Search members..." autocomplete="off" class="border border-warm-200 bg-white px-3 py-1.5 text-xs text-near-black outline-none transition-colors focus:border-accent w-48" oninput="filterMembers()" />
             <span class="text-xs text-warm-500">{{len .Members}} total</span>
           </div>
         </div>
@@ -188,13 +188,14 @@
                   <a href="/member-detail?member_id={{.ID}}" class="font-medium text-accent hover:underline">{{.Name}}</a>
                 </td>
                 <td class="px-4 py-3">
-                  {{if eq .Status "active"}}<span class="font-medium text-accent">Active</span>
-                  {{else if eq .Status "probation"}}<span class="font-medium text-warm-700">Probation</span>
-                  {{else if eq .Status "bonafide"}}<span class="font-medium text-near-black">Bonafide</span>
+                  {{if eq .Status "active"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-active-light text-active">Active</span>
+                  {{else if eq .Status "probation"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-probation-light text-probation">Probation</span>
+                  {{else if eq .Status "bonafide"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-bonafide-light text-bonafide">Bonafide</span>
+                  {{else if eq .Status "ex-member"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ex-member-light text-ex-member">Ex-member</span>
                   {{else}}<span class="text-warm-500">{{.Status}}</span>
                   {{end}}
                 </td>
-                <td class="px-4 py-3 text-right tabular-nums font-medium text-near-black">₦{{printf "%.2f" .Balance}}</td>
+                <td class="px-4 py-3 text-right tabular-nums font-medium text-near-black">₦{{formatNaira .Balance}}</td>
               </tr>
               {{end}}
             </tbody>
@@ -238,8 +239,13 @@
                   <a href="/event-detail?event_id={{.ID}}" class="font-medium text-accent hover:underline">{{.Title}}</a>
                 </td>
                 <td class="px-4 py-3 tabular-nums text-warm-700">{{.Date}}</td>
-                <td class="px-4 py-3 text-warm-700">{{.Status}}</td>
-                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{printf "%.2f" .MinAmountExpected}}</td>
+                <td class="px-4 py-3 text-warm-700">
+                  {{if eq .Status "open"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-active-light text-active">Open</span>
+                  {{else if eq .Status "settled"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Settled</span>
+                  {{else}}<span class="text-warm-500">{{.Status}}</span>
+                  {{end}}
+                </td>
+                <td class="px-4 py-3 text-right tabular-nums text-warm-700">₦{{formatNaira .MinAmountExpected}}</td>
               </tr>
               {{else}}
               <tr>

@@ -2,12 +2,11 @@ package app
 
 import (
 	"bytes"
-	"html/template"
 	"net/http"
 )
 
 func RenderMemberDetail(w http.ResponseWriter, r *http.Request, view *MemberDashboardView, store *Store) {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/member_detail.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/member_detail.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

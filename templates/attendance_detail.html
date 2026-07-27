@@ -29,26 +29,26 @@
             {{range .Records}}
             <tr class="member-row" data-member-name="{{.MemberName}}">
               <td class="px-4 py-2.5 text-near-black">{{.MemberName}}</td>
-              <td class="px-4 py-2.5">
-                {{if eq .Status "present"}}
-                <span class="inline-flex items-center gap-1 text-sm font-medium text-near-black">
-                  <span class="inline-block h-2 w-2 bg-accent"></span> Present
-                </span>
-                {{else if eq .Status "absent"}}
-                <span class="inline-flex items-center gap-1 text-sm font-medium text-danger">
-                  <span class="inline-block h-2 w-2 bg-danger"></span> Absent
-                </span>
-                {{else if eq .Status "not_recorded"}}
-                <span class="inline-flex items-center gap-1 text-sm text-warm-400">
-                  <span class="inline-block h-2 w-2 bg-warm-200"></span> Not recorded
-                </span>
-                {{else}}
-                <span class="inline-flex items-center gap-1 text-sm font-medium text-warm-500">
-                  <span class="inline-block h-2 w-2 bg-warm-300"></span> {{.Status}}
-                </span>
-                {{end}}
-              </td>
-              <td class="px-4 py-2.5 text-warm-500">{{if .Note}}{{.Note}}{{end}}</td>
+<td class="px-4 py-2.5">
+{{if eq .Status "present"}}
+<span class="inline-flex items-center gap-1 text-sm font-medium text-success">
+<span class="inline-block h-2 w-2 bg-success rounded-full"></span> Present
+</span>
+{{else if eq .Status "absent"}}
+<span class="inline-flex items-center gap-1 text-sm font-medium text-danger">
+<span class="inline-block h-2 w-2 bg-danger rounded-full"></span> Absent
+</span>
+{{else if eq .Status "not_recorded"}}
+<span class="inline-flex items-center gap-1 text-sm text-warm-500">
+<span class="inline-block h-2 w-2 bg-warm-300 rounded-full"></span> Not recorded
+</span>
+{{else}}
+<span class="inline-flex items-center gap-1 text-sm font-medium text-warm-500">
+<span class="inline-block h-2 w-2 bg-warm-300 rounded-full"></span> {{.Status}}
+</span>
+{{end}}
+</td>
+              <td class="px-4 py-2.5 text-warm-500 break-words">{{if .Note}}{{.Note}}{{end}}</td>
             </tr>
             {{end}}
           </tbody>

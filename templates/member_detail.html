@@ -12,7 +12,7 @@
             <h1 class="text-2xl font-bold tracking-tight text-near-black">{{.View.Member.Name}}</h1>
             <p class="mt-1 text-sm text-warm-500">{{.View.Member.Email}}{{if .View.Member.Phone}} · {{.View.Member.Phone}}{{end}}</p>
             <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium uppercase tracking-[0.1em] text-warm-500">
-              <span>Status: <span class="text-near-black">{{.View.Member.Status}}</span></span>
+              <span>Status: {{if eq .View.Member.Status "active"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-active-light text-active">Active</span>{{else if eq .View.Member.Status "probation"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-probation-light text-probation">Probation</span>{{else if eq .View.Member.Status "bonafide"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-bonafide-light text-bonafide">Bonafide</span>{{else if eq .View.Member.Status "ex-member"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-ex-member-light text-ex-member">Ex-member</span>{{else}}<span class="text-near-black">{{.View.Member.Status}}</span>{{end}}</span>
               <span>Attendance: <span class="text-near-black">{{.View.Summary.AttendancePresent}} / {{.View.Summary.AttendanceTotal}}</span></span>
               {{if .View.Member.ProbationEnds}}
               <span>Probation ends: <span class="text-near-black">{{.View.Member.ProbationEnds}}</span></span>
@@ -39,14 +39,16 @@
               <span class="text-xs text-warm-500">Present: <span class="font-medium text-near-black">{{.View.Summary.AttendancePresent}}</span></span>
               <span class="text-xs text-warm-500">Absent (w/o perm): <span class="font-medium text-danger">{{.View.Summary.AttendanceAbsent}}</span></span>
             </div>
-            <ul id="attendance-list" class="divide-y divide-warm-200">
-              {{range .View.Attendance}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span class="tabular-nums text-warm-700">{{.MeetingDate}}</span>
-                <span class="text-warm-700">{{.Status}}</span>
-              </li>
-              {{end}}
-            </ul>
+<ul id="attendance-list" class="divide-y divide-warm-200">
+{{range .View.Attendance}}
+<li class="flex items-center justify-between px-4 py-2.5 text-sm">
+<span class="tabular-nums text-warm-700">{{.MeetingDate}}</span>
+<span class="text-warm-700">{{if eq .Status "present"}}<span class="font-medium text-success">Present</span>{{else if eq .Status "absent"}}<span class="font-medium text-danger">Absent</span>{{else}}<span class="text-warm-500">{{.Status}}</span>{{end}}</span>
+</li>
+{{else}}
+<li class="px-4 py-4 text-sm text-warm-500">No attendance records yet.</li>
+{{end}}
+</ul>
             <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
               <button id="attendance-prev" onclick="pagePrev('attendance')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
               <span id="attendance-page" class="text-xs text-warm-500">1 of 1</span>
@@ -59,31 +61,33 @@
           <h2 class="text-xs font-semibold uppercase tracking-[0.12em] text-warm-500 mb-3">Dues</h2>
           <div class="border border-warm-200">
             <div class="flex items-center justify-between border-b border-warm-200 bg-warm-50 px-4 py-2">
-              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{printf "%.2f" .View.Summary.DuesPaid}}</span></span>
-              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{printf "%.2f" .View.Summary.DuesOwed}}</span></span>
+              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{formatNaira .View.Summary.DuesPaid}}</span></span>
+              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{formatNaira .View.Summary.DuesOwed}}</span></span>
             </div>
             <ul id="dues-list" class="divide-y divide-warm-200">
               {{range .View.Dues}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-                <div>
-                  <span class="tabular-nums text-warm-700">{{.DueDate}}</span>
-                  <span class="ml-2 text-warm-500">{{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}}</span>
-                </div>
+<li class="flex items-center justify-between px-4 py-2.5 text-sm">
+<div>
+<span class="tabular-nums text-warm-700">{{.DueDate}}</span>
+<span class="ml-2">{{if eq .Status "paid"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Paid</span>{{else if eq .Status "partially_paid"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning-light text-warning">Partially Paid</span>{{else if eq .Status "owed"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Owed</span>{{else}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Not Paid</span>{{end}}</span>
+</div>
                 <div class="flex items-center gap-2">
-                  <span class="tabular-nums font-medium text-near-black">₦{{printf "%.2f" .Amount}}</span>
+                  <span class="tabular-nums font-medium text-near-black">₦{{formatNaira .Amount}}</span>
                   {{if or (eq .Status "pending") (eq .Status "owed") (eq .Status "partially_paid")}}
                   <form hx-post="/mark-dues-paid" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
                     <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                     <input type="hidden" name="dues_id" value="{{.ID}}" />
-                    <button type="submit" class="text-xs font-medium text-accent hover:underline">Mark paid</button>
+                    <button type="submit" hx-disabled-on="click" class="text-xs font-medium text-accent hover:underline disabled:opacity-50">Mark paid</button>
                   </form>
                   {{end}}
                 </div>
               </li>
-              {{end}}
-            </ul>
-            <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
-              <button id="dues-prev" onclick="pagePrev('dues')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
+{{else}}
+<li class="px-4 py-4 text-sm text-warm-500">No dues records yet.</li>
+{{end}}
+</ul>
+<div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
+<button id="dues-prev" onclick="pagePrev('dues')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
               <span id="dues-page" class="text-xs text-warm-500">1 of 1</span>
               <button id="dues-next" onclick="pageNext('dues')" class="text-xs text-warm-500 hover:text-near-black">Next &rarr;</button>
             </div>
@@ -94,44 +98,46 @@
           <h2 class="text-xs font-semibold uppercase tracking-[0.12em] text-warm-500 mb-3">Fines</h2>
           <div class="border border-warm-200">
             <div class="flex items-center justify-between border-b border-warm-200 bg-warm-50 px-4 py-2">
-              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{printf "%.2f" .View.Summary.FinesPaid}}</span></span>
-              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{printf "%.2f" .View.Summary.FinesOwed}}</span></span>
+              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{formatNaira .View.Summary.FinesPaid}}</span></span>
+              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{formatNaira .View.Summary.FinesOwed}}</span></span>
             </div>
             {{if gt .View.Summary.FinesOwed 0.0}}
             <div class="border-b border-warm-200 px-4 py-2">
               <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML">
                 <input type="hidden" name="member_id" value="{{.View.Member.ID}}" />
-                <button type="submit" class="text-xs font-medium text-accent hover:underline">Deduct all from dues</button>
+                <button type="submit" hx-disabled-on="click" class="text-xs font-medium text-accent hover:underline disabled:opacity-50">Deduct all from dues</button>
               </form>
             </div>
-            {{end}}
-            <ul id="fines-list" class="divide-y divide-warm-200">
-              {{range .View.Fines}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-                <div>
-                  <span class="text-warm-700">{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}}</span>
-                  <span class="ml-2 text-warm-500">{{.Status}}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="tabular-nums font-medium text-near-black">₦{{printf "%.2f" .Amount}}</span>
-                  {{if eq .Status "outstanding"}}
-                  <form hx-post="/mark-fine-paid" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
-                    <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
-                    <input type="hidden" name="fine_id" value="{{.ID}}" />
-                    <button type="submit" class="text-xs font-medium text-accent hover:underline">Pay</button>
-                  </form>
-                  <form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
-                    <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
-                    <input type="hidden" name="fine_id" value="{{.ID}}" />
-                    <button type="submit" class="text-xs font-medium text-accent hover:underline">Deduct</button>
-                  </form>
-                  {{end}}
-                </div>
-              </li>
-              {{end}}
-            </ul>
-            <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
-              <button id="fines-prev" onclick="pagePrev('fines')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
+{{end}}
+<ul id="fines-list" class="divide-y divide-warm-200">
+{{range .View.Fines}}
+<li class="flex items-center justify-between px-4 py-2.5 text-sm">
+<div>
+<span class="text-warm-700 break-words">{{if .FineDate}}{{.FineDate}} · {{end}}{{.Reason}}</span>
+<span class="ml-2">{{if eq .Status "paid"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Paid</span>{{else}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Outstanding</span>{{end}}</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="tabular-nums font-medium text-near-black">₦{{formatNaira .Amount}}</span>
+{{if eq .Status "outstanding"}}
+<form hx-post="/mark-fine-paid" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
+<input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
+<input type="hidden" name="fine_id" value="{{.ID}}" />
+<button type="submit" hx-disabled-on="click" class="text-xs font-medium text-accent hover:underline disabled:opacity-50">Pay</button>
+</form>
+<form hx-post="/deduct-fine" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
+<input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
+<input type="hidden" name="fine_id" value="{{.ID}}" />
+<button type="submit" hx-disabled-on="click" class="text-xs font-medium text-accent hover:underline disabled:opacity-50">Deduct</button>
+</form>
+{{end}}
+</div>
+</li>
+{{else}}
+<li class="px-4 py-4 text-sm text-warm-500">No fines recorded.</li>
+{{end}}
+</ul>
+<div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
+<button id="fines-prev" onclick="pagePrev('fines')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
               <span id="fines-page" class="text-xs text-warm-500">1 of 1</span>
               <button id="fines-next" onclick="pageNext('fines')" class="text-xs text-warm-500 hover:text-near-black">Next &rarr;</button>
             </div>
@@ -142,29 +148,31 @@
           <h2 class="text-xs font-semibold uppercase tracking-[0.12em] text-warm-500 mb-3">Contributions</h2>
           <div class="border border-warm-200">
             <div class="flex items-center justify-between border-b border-warm-200 bg-warm-50 px-4 py-2">
-              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{printf "%.2f" .View.Summary.ContributionsPaid}}</span></span>
-              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{printf "%.2f" .View.Summary.ContributionsOwed}}</span></span>
+              <span class="text-xs text-warm-500">Paid: <span class="font-medium text-near-black">₦{{formatNaira .View.Summary.ContributionsPaid}}</span></span>
+              <span class="text-xs text-warm-500">Owed: <span class="font-medium text-danger">₦{{formatNaira .View.Summary.ContributionsOwed}}</span></span>
             </div>
             <ul id="contributions-list" class="divide-y divide-warm-200">
               {{range .View.Contributions}}
-              <li class="flex items-center justify-between px-4 py-2.5 text-sm">
-                <div>
-                  <span class="text-warm-700">{{$.Store.EventTitle .EventID}}</span>
-                  <span class="ml-2 text-warm-500">{{if eq .Status "pending"}}not_paid{{else}}{{.Status}}{{end}}</span>
-                </div>
+<li class="flex items-center justify-between px-4 py-2.5 text-sm">
+<div>
+<span class="text-warm-700">{{$.Store.EventTitle .EventID}}</span>
+<span class="ml-2">{{if eq .Status "paid"}}{{else if eq .Status "partially_paid"}}{{else if eq .Status "settled"}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success-light text-success">Paid</span>{{else}}<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-danger-light text-danger">Not Paid</span>{{end}}</span>
+</div>
                 <div class="flex items-center gap-2">
-                  <span class="tabular-nums font-medium text-near-black">₦{{printf "%.2f" .Amount}}</span>
+                  <span class="tabular-nums font-medium text-near-black">₦{{formatNaira .Amount}}</span>
                   {{if eq .Status "pending"}}
                   <form hx-post="/mark-contribution-paid" hx-target="#member-content" hx-swap="outerHTML" class="shrink-0">
                     <input type="hidden" name="member_id" value="{{$.View.Member.ID}}" />
                     <input type="hidden" name="event_id" value="{{.EventID}}" />
-                    <button type="submit" class="text-xs font-medium text-accent hover:underline">Deduct</button>
+                    <button type="submit" hx-disabled-on="click" class="text-xs font-medium text-accent hover:underline disabled:opacity-50">Deduct</button>
                   </form>
                   {{end}}
                 </div>
               </li>
-              {{end}}
-            </ul>
+{{else}}
+<li class="px-4 py-4 text-sm text-warm-500">No contributions recorded.</li>
+{{end}}
+</ul>
             <div class="flex items-center justify-between border-t border-warm-200 px-4 py-2">
               <button id="contributions-prev" onclick="pagePrev('contributions')" class="text-xs text-warm-500 hover:text-near-black">&larr; Prev</button>
               <span id="contributions-page" class="text-xs text-warm-500">1 of 1</span>

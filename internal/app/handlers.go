@@ -11,6 +11,12 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
+func parseTemplates(files ...string) (*template.Template, error) {
+	funcs := template.FuncMap{"formatNaira": FormatNaira}
+	tmpl := template.New("").Funcs(funcs)
+	return tmpl.ParseFiles(files...)
+}
+
 type PageData struct {
 	Title            string
 	ActivePage       string
@@ -189,7 +195,7 @@ func buildPageData(store *Store) PageData {
 }
 
 func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/index.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/index.html")
 	if err != nil {
 		return err
 	}
@@ -1005,7 +1011,7 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func RenderMembersNew(w http.ResponseWriter, r *http.Request, store *Store) {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/members_new.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/members_new.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1026,7 +1032,7 @@ func RenderMembersNew(w http.ResponseWriter, r *http.Request, store *Store) {
 }
 
 func RenderEventsNew(w http.ResponseWriter, r *http.Request, store *Store) {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/events_new.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/events_new.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1047,7 +1053,7 @@ func RenderEventsNew(w http.ResponseWriter, r *http.Request, store *Store) {
 }
 
 func RenderFinesNew(w http.ResponseWriter, r *http.Request, store *Store) {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/fines_new.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/fines_new.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1075,7 +1081,7 @@ func RenderFinesNew(w http.ResponseWriter, r *http.Request, store *Store) {
 }
 
 func RenderAttendanceNew(w http.ResponseWriter, r *http.Request, store *Store) {
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/attendance_new.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/attendance_new.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1138,7 +1144,7 @@ func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store
 
 	view := AttendanceDetailView{MeetingDate: date, Records: records, Filter: filter}
 
-	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/attendance_detail.html")
+	tmpl, err := parseTemplates("templates/base.html", "templates/sidebar.html", "templates/attendance_detail.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

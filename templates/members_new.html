@@ -14,15 +14,15 @@
       <form hx-post="/members" hx-target="#members-content" hx-swap="outerHTML" class="space-y-6">
         <div>
           <label for="name" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Name *</label>
-          <input id="name" name="name" type="text" required class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="Full name" />
+          <input id="name" name="name" type="text" required maxlength="150" autocomplete="name" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent break-words" placeholder="Full name" />
         </div>
         <div>
           <label for="email" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Email</label>
-          <input id="email" name="email" type="email" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="email@example.com" />
+          <input id="email" name="email" type="email" maxlength="150" autocomplete="email" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent break-words" placeholder="email@example.com" />
         </div>
         <div>
           <label for="phone" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Phone</label>
-          <input id="phone" name="phone" type="tel" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="+234 ..." />
+          <input id="phone" name="phone" type="tel" maxlength="30" autocomplete="tel" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent break-words" placeholder="+234 ..." />
         </div>
         <div>
           <label for="status" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Status</label>
@@ -32,7 +32,7 @@
           </select>
         </div>
         <div class="flex items-center gap-3 pt-2">
-          <button type="submit" class="bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent/90">Save Member</button>
+          <button type="submit" hx-disabled-on="click" class="bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed">Save Member</button>
           <a href="/" class="px-5 py-2.5 text-sm font-medium text-warm-700 hover:text-near-black">Cancel</a>
         </div>
       </form>

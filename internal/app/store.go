@@ -277,7 +277,7 @@ func FormatNaira(amount float64) string {
 		}
 		s = string(result)
 	}
-	formatted := fmt.Sprintf("₦%s.%02d", s, fracPart)
+	formatted := fmt.Sprintf("%s.%02d", s, fracPart)
 	if negative {
 		formatted = "-" + formatted
 	}
@@ -1379,12 +1379,12 @@ type AttendanceRecord struct {
 }
 
 type DuesRecord struct {
-	ID        int
-	MemberID  int
-	Amount    float64
-	Deducted  float64
-	Status    string
-	DueDate   string
+	ID       int
+	MemberID int
+	Amount   float64
+	Deducted float64
+	Status   string
+	DueDate  string
 }
 
 type Fine struct {

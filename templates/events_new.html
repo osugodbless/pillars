@@ -13,11 +13,11 @@
       <form hx-post="/events" hx-target="#events-content" hx-swap="outerHTML" class="space-y-6">
         <div>
           <label for="title" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Title *</label>
-          <input id="title" name="title" type="text" required class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="Event name" />
+          <input id="title" name="title" type="text" required maxlength="200" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent break-words" placeholder="Event name" />
         </div>
         <div>
           <label for="description" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Description</label>
-          <input id="description" name="description" type="text" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="Brief description" />
+          <input id="description" name="description" type="text" maxlength="500" class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent break-words" placeholder="Brief description" />
         </div>
         <div>
           <label for="date" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Date *</label>
@@ -25,10 +25,10 @@
         </div>
         <div>
           <label for="min_amount_expected" class="block text-xs font-semibold uppercase tracking-[0.1em] text-warm-500 mb-1.5">Funding Goal (₦) *</label>
-          <input id="min_amount_expected" name="min_amount_expected" type="number" step="0.01" required class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="0.00" />
+          <input id="min_amount_expected" name="min_amount_expected" type="number" step="1" min="1" required class="w-full border border-warm-200 bg-white px-3 py-2.5 text-sm text-near-black outline-none transition-colors focus:border-accent" placeholder="2000" />
         </div>
         <div class="flex items-center gap-3 pt-2">
-          <button type="submit" class="bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent/90">Create Event</button>
+          <button type="submit" hx-disabled-on="click" class="bg-accent px-5 py-2.5 text-sm font-semibold text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed">Create Event</button>
           <a href="/" class="px-5 py-2.5 text-sm font-medium text-warm-700 hover:text-near-black">Cancel</a>
         </div>
       </form>
