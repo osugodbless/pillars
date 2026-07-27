@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{.Title}} | Pillars Cooperative</title>
+  <script defer src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'near-black': '#1a1a1a',
+            'warm-50': '#f7f6f3',
+            'warm-100': '#eeedea',
+            'warm-200': '#e8e6e1',
+            'warm-300': '#d4d1cc',
+            'warm-500': '#787571',
+            'warm-700': '#5c5955',
+            'accent': '#003d8f',
+            'accent-light': '#eef3fb',
+            'danger': '#c41230',
+          },
+          fontFamily: {
+            'sans': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; scroll-behavior: smooth; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    [id] { scroll-margin-top: 4rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .sr-only:focus { position: static; width: auto; height: auto; padding: 0.5rem 1rem; margin: 0; overflow: visible; clip: auto; white-space: normal; background: #003d8f; color: #fff; z-index: 100; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      html { scroll-behavior: auto; }
+    }
+  </style>
+</head>
+<body class="min-h-full bg-white text-near-black">
+  <a href="#main-content" class="sr-only">Skip to main content</a>
+  <div id="toast" role="status" aria-live="polite" class="fixed z-50 px-4 py-2 text-sm text-white opacity-0 transition-all duration-200 pointer-events-none"></div>
+  {{template "content" .}}
+  <script>
+    document.getElementById('sidebar-toggle').addEventListener('click', function() {
+      var sidebar = document.getElementById('sidebar');
+      var overlay = document.getElementById('sidebar-overlay');
+      sidebar.classList.toggle('-translate-x-full');
+      overlay.classList.toggle('hidden');
+    });
+    document.getElementById('sidebar-overlay').addEventListener('click', function() {
+      document.getElementById('sidebar').classList.add('-translate-x-full');
+      this.classList.add('hidden');
+    });
+    var lastClickPos = null;
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('button, input[type="submit"], a[href], [hx-post], [hx-get]');
+      if (btn) {
+        var r = btn.getBoundingClientRect();
+        lastClickPos = { x: r.left + r.width / 2, y: r.top };
+      }
+    });
+    document.body.addEventListener('showToast', function(e) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      var d = e.detail;
+      t.textContent = d.message;
+      t.className = 'fixed z-50 px-4 py-2 text-sm text-white transition-all duration-200 ' + (d.type === 'error' ? 'bg-danger' : 'bg-near-black');
+      if (lastClickPos) {
+        t.style.left = lastClickPos.x + 'px';
+        t.style.top = (lastClickPos.y - 10) + 'px';
+        t.style.transform = 'translateX(-50%) translateY(-100%)';
+      }
+      t.style.opacity = '1';
+      setTimeout(function() { t.style.opacity = '0'; }, 2000);
+    });
+    // Modal accessibility: focus trap, Escape key, aria-hidden
+    (function() {
+      var openModal = null;
+      var previousFocus = null;
+      function getFocusable(el) {
+        return el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      }
+      function trapFocus(e) {
+        if (!openModal) return;
+        var focusable = getFocusable(openModal);
+        if (!focusable.length) return;
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (e.key === 'Tab') {
+          if (e.shiftKey && document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+      function handleEscape(e) {
+        if (e.key === 'Escape' && openModal) {
+          closeModal(openModal);
+        }
+      }
+      function openModalFn(modal) {
+        previousFocus = document.activeElement;
+        openModal = modal;
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        var focusable = getFocusable(modal);
+        if (focusable.length) focusable[0].focus();
+        document.addEventListener('keydown', trapFocus);
+        document.addEventListener('keydown', handleEscape);
+      }
+      function closeModal(modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        openModal = null;
+        document.removeEventListener('keydown', trapFocus);
+        document.removeEventListener('keydown', handleEscape);
+        if (previousFocus) previousFocus.focus();
+      }
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-modal-open]');
+        if (btn) {
+          var id = btn.getAttribute('data-modal-open');
+          var modal = document.getElementById(id);
+          if (modal) {
+            modal.classList.remove('hidden');
+            openModalFn(modal);
+          }
+        }
+        var closeBtn = e.target.closest('[data-modal-close]');
+        if (closeBtn) {
+          var modal = closeBtn.closest('[role="dialog"]');
+          if (modal) closeModal(modal);
+        }
+        if (e.target.classList.contains('modal-backdrop')) {
+          closeModal(e.target);
+        }
+      });
+      window.openModal = openModalFn;
+      window.closeModal = closeModal;
+    })();
+  </script>
+</body>
+</html>

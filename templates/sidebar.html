@@ -1,0 +1,76 @@
+{{define "sidebar"}}
+<aside class="fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-warm-200 bg-white" id="sidebar">
+  <div class="flex h-16 items-center border-b border-warm-200 px-5">
+    <a href="/" class="text-lg font-bold tracking-tight text-near-black" style="letter-spacing: -0.03em;">Pillars</a>
+    <span class="ml-2 text-xs font-medium uppercase tracking-widest text-warm-500">Cooperative</span>
+  </div>
+
+  <nav class="flex-1 overflow-y-auto px-3 py-4">
+    <div class="space-y-1">
+      <a href="/" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "dashboard"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-700 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Dashboard
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.12em] text-warm-500">Members</p>
+      </div>
+      <a href="/#members" class="flex items-center rounded px-3 py-2 text-sm font-medium transition-colors {{if eq .ActivePage "members"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-700 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Members
+      </a>
+      <a href="/members/new" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "members-new"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        <span class="mr-1.5 text-accent">+</span> New Member
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.12em] text-warm-500">Attendance</p>
+      </div>
+      <a href="/#attendance" class="flex items-center rounded px-3 py-2 text-sm font-medium transition-colors {{if eq .ActivePage "attendance"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-700 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Records
+      </a>
+      <a href="/attendance/new" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "attendance-new"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        <span class="mr-1.5 text-accent">+</span> Record Attendance
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.12em] text-warm-500">Events</p>
+      </div>
+      <a href="/#events" class="flex items-center rounded px-3 py-2 text-sm font-medium transition-colors {{if eq .ActivePage "events"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-700 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Events
+      </a>
+      <a href="/events/new" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "events-new"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        <span class="mr-1.5 text-accent">+</span> New Event
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.12em] text-warm-500">Fines</p>
+      </div>
+      <a href="/" class="flex items-center rounded px-3 py-2 text-sm font-medium transition-colors {{if eq .ActivePage "fines"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-700 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Fines
+      </a>
+      <a href="/fines/new" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "fines-new"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        <span class="mr-1.5 text-accent">+</span> Issue Fine
+      </a>
+
+      <div class="pt-3 pb-1 px-3">
+        <p class="text-[10px] font-semibold uppercase tracking-[0.12em] text-warm-500">Reports</p>
+      </div>
+      <a href="/reports/committee" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "reports"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Committee Report
+      </a>
+      <a href="/reports/arrears" class="flex items-center rounded px-3 py-2 text-sm transition-colors {{if eq .ActivePage "arrears"}}bg-warm-100 font-semibold text-near-black{{else}}text-warm-500 hover:bg-warm-50 hover:text-near-black{{end}}">
+        Arrears Report
+      </a>
+    </div>
+  </nav>
+
+  <div class="border-t border-warm-200 px-5 py-3">
+    <p class="text-[10px] font-medium uppercase tracking-[0.12em] text-warm-500">Pillars Cooperative</p>
+  </div>
+</aside>
+
+<button id="sidebar-toggle" class="fixed top-3 left-3 z-50 rounded border border-warm-200 bg-white p-2 text-near-black lg:hidden" aria-label="Toggle navigation">
+  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+</button>
+
+<div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-near-black/30 lg:hidden"></div>
+{{end}}

@@ -38,11 +38,9 @@ internal/app/store.go      — domain models, persistence, business logic
 internal/app/handlers.go   — HTTP handlers (HTMX-aware)
 internal/app/store_test.go — tests
 templates/*.html           — Go templates with Tailwind
-data/pillars.db            — SQLite database (committed)
-server                     — prebuilt static binary (build artifact)
 ```
 
 ## gstack
 - Use the `/browse` skill from gstack for all web browsing
 - Never use `mcp__claude-in-chrome__*` tools
-- Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate, /document-release, /document-generate, /codex, /cso, /autoplan, /plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn
+- Available gstack skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate, /document-release, /document-generate, /codex, /cso, /autoplan, /plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade, /learn 

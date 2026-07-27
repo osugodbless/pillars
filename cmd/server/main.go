@@ -22,16 +22,39 @@ func main() {
 		app.HandleIndex(w, r, store)
 	})
 	mux.HandleFunc("/members", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Query().Get("new") == "1" {
+			app.RenderMembersNew(w, r, store)
+			return
+		}
 		app.HandleMembers(w, r, store)
+	})
+	mux.HandleFunc("/members/new", func(w http.ResponseWriter, r *http.Request) {
+		app.RenderMembersNew(w, r, store)
 	})
 	mux.HandleFunc("/attendance", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleAttendance(w, r, store)
+	})
+	mux.HandleFunc("/attendance/new", func(w http.ResponseWriter, r *http.Request) {
+		app.RenderAttendanceNew(w, r, store)
 	})
 	mux.HandleFunc("/dues", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleDues(w, r, store)
 	})
 	mux.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleEvents(w, r, store)
+	})
+	mux.HandleFunc("/events/new", func(w http.ResponseWriter, r *http.Request) {
+		app.RenderEventsNew(w, r, store)
+	})
+	mux.HandleFunc("/fines", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		app.HandleAddFine(w, r, store)
+	})
+	mux.HandleFunc("/fines/new", func(w http.ResponseWriter, r *http.Request) {
+		app.RenderFinesNew(w, r, store)
 	})
 	mux.HandleFunc("/contributions", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleContribution(w, r, store)
@@ -44,9 +67,6 @@ func main() {
 	})
 	mux.HandleFunc("/attendance-detail", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleAttendanceDetail(w, r, store)
-	})
-	mux.HandleFunc("/fines", func(w http.ResponseWriter, r *http.Request) {
-		app.HandleAddFine(w, r, store)
 	})
 	mux.HandleFunc("/deduct-fine", func(w http.ResponseWriter, r *http.Request) {
 		app.HandleDeductFine(w, r, store)

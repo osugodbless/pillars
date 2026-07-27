@@ -7,20 +7,22 @@ import (
 )
 
 func RenderMemberDetail(w http.ResponseWriter, r *http.Request, view *MemberDashboardView, store *Store) {
-	tmpl, err := template.ParseFiles("templates/member_detail.html")
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/member_detail.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	data := struct {
-		View  *MemberDashboardView
-		Store *Store
-	}{View: view, Store: store}
+		Title      string
+		ActivePage string
+		View       *MemberDashboardView
+		Store      *Store
+	}{Title: view.Member.Name, ActivePage: "members", View: view, Store: store}
 	var buf bytes.Buffer
 	if r != nil && r.Header.Get("HX-Request") != "" {
 		err = tmpl.ExecuteTemplate(&buf, "content", data)
 	} else {
-		err = tmpl.Execute(&buf, data)
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

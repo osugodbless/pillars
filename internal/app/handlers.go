@@ -12,6 +12,8 @@ import (
 )
 
 type PageData struct {
+	Title            string
+	ActivePage       string
 	Members          []MemberView
 	Attendance       []AttendanceView
 	AttendanceGroups []AttendanceGroup
@@ -183,11 +185,11 @@ func buildPageData(store *Store) PageData {
 		}
 	}
 
-	return PageData{Members: memberViews, Attendance: attendanceViews, AttendanceGroups: attendanceGroups, Events: store.Events, Fines: store.Fines, Dues: store.Dues, Contributions: store.Contributions, Stats: stats, ProbationReview: store.ProbationReviewDue()}
+	return PageData{Title: "Dashboard", ActivePage: "dashboard", Members: memberViews, Attendance: attendanceViews, AttendanceGroups: attendanceGroups, Events: store.Events, Fines: store.Fines, Dues: store.Dues, Contributions: store.Contributions, Stats: stats, ProbationReview: store.ProbationReviewDue()}
 }
 
 func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
-	tmpl, err := template.ParseFiles("templates/index.html")
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/index.html")
 	if err != nil {
 		return err
 	}
@@ -198,7 +200,7 @@ func RenderIndex(w http.ResponseWriter, r *http.Request, store *Store) error {
 	if r != nil && r.Header.Get("HX-Request") != "" {
 		err = tmpl.ExecuteTemplate(&buf, "content", data)
 	} else {
-		err = tmpl.Execute(&buf, data)
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
 	}
 	if err != nil {
 		return err
@@ -327,9 +329,14 @@ func buildEventDashboardView(store *Store, eventID int, filter string) *EventDas
 
 func renderIndexFragment(w http.ResponseWriter, r *http.Request, store *Store, msg string, msgType string) {
 	w.Header().Set("HX-Trigger", `{"showToast":{"message":"`+msg+`","type":"`+msgType+`"}}`)
-	if err := RenderIndex(w, r, store); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if r.Header.Get("HX-Request") != "" && r.FormValue("source") == "index" {
+		if err := RenderIndex(w, r, store); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
 	}
+	// For new standalone pages, redirect back to the list page
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func HandleMembers(w http.ResponseWriter, r *http.Request, store *Store) {
@@ -997,6 +1004,104 @@ func HandleHealth(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "ok")
 }
 
+func RenderMembersNew(w http.ResponseWriter, r *http.Request, store *Store) {
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/members_new.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := PageData{Title: "New Member", ActivePage: "members-new", Members: make([]MemberView, 0)}
+	var buf bytes.Buffer
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
+	} else {
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(buf.Bytes())
+}
+
+func RenderEventsNew(w http.ResponseWriter, r *http.Request, store *Store) {
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/events_new.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	data := PageData{Title: "New Event", ActivePage: "events-new"}
+	var buf bytes.Buffer
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
+	} else {
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(buf.Bytes())
+}
+
+func RenderFinesNew(w http.ResponseWriter, r *http.Request, store *Store) {
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/fines_new.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	memberViews := make([]MemberView, 0, len(store.Members))
+	for _, member := range store.Members {
+		if member.Status == "ex-member" {
+			continue
+		}
+		memberViews = append(memberViews, MemberView{ID: member.ID, Name: member.Name})
+	}
+	data := PageData{Title: "Issue Fine", ActivePage: "fines-new", Members: memberViews}
+	var buf bytes.Buffer
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
+	} else {
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(buf.Bytes())
+}
+
+func RenderAttendanceNew(w http.ResponseWriter, r *http.Request, store *Store) {
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/attendance_new.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	memberViews := make([]MemberView, 0, len(store.Members))
+	for _, member := range store.Members {
+		if member.Status == "ex-member" {
+			continue
+		}
+		memberViews = append(memberViews, MemberView{ID: member.ID, Name: member.Name})
+	}
+	data := PageData{Title: "Record Attendance", ActivePage: "attendance-new", Members: memberViews}
+	var buf bytes.Buffer
+	if r != nil && r.Header.Get("HX-Request") != "" {
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
+	} else {
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write(buf.Bytes())
+}
+
 func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1033,16 +1138,21 @@ func HandleAttendanceDetail(w http.ResponseWriter, r *http.Request, store *Store
 
 	view := AttendanceDetailView{MeetingDate: date, Records: records, Filter: filter}
 
-	tmpl, err := template.ParseFiles("templates/attendance_detail.html")
+	tmpl, err := template.ParseFiles("templates/base.html", "templates/sidebar.html", "templates/attendance_detail.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	data := struct {
+		Title      string
+		ActivePage string
+		AttendanceDetailView
+	}{Title: "Attendance " + date, ActivePage: "attendance", AttendanceDetailView: view}
 	var buf bytes.Buffer
 	if r.Header.Get("HX-Request") != "" {
-		err = tmpl.ExecuteTemplate(&buf, "content", view)
+		err = tmpl.ExecuteTemplate(&buf, "content", data)
 	} else {
-		err = tmpl.Execute(&buf, view)
+		err = tmpl.ExecuteTemplate(&buf, "base.html", data)
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
